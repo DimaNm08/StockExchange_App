@@ -1,21 +1,5 @@
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: const OnboardingScreen(),
-    );
-  }
-}
-
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({Key? key}) : super(key: key);
 
@@ -33,7 +17,7 @@ class OnboardingScreen extends StatelessWidget {
                 alignment: Alignment.topRight,
                 child: TextButton(
                   onPressed: () {
-                    // Navigate to dashboard
+                    // Navigate to dashboard (you can implement this later)
                   },
                   child: const Text(
                     'Skip',
@@ -63,13 +47,14 @@ class OnboardingScreen extends StatelessWidget {
                             color: const Color(0xFF515FDD).withOpacity(0.2),
                           ),
                         ),
-                        Padding(
+                       Padding(
                           padding: const EdgeInsets.all(48.0),
                           child: Image.asset(
-                            'assets/app_preview.png', // Make sure this image exists in your assets folder
-                            fit: BoxFit.contain,
-                          ),
+                          'lib/assets/app_preview.png', // Path from the project root
+                          fit: BoxFit.contain,
+                         ),
                         ),
+
                       ],
                     ),
                     const SizedBox(height: 32),
@@ -141,7 +126,7 @@ class OnboardingScreen extends StatelessWidget {
                     // Sign In Button
                     OutlinedButton(
                       onPressed: () {
-                        // Handle sign in
+                        // Handle sign in (you can implement this later)
                       },
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 56),
@@ -164,10 +149,11 @@ class OnboardingScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
-                    // Sign Up Button
+                    // Sign Up Button (Modified)
                     ElevatedButton(
                       onPressed: () {
-                        // Handle sign up
+                        // Navigate to the signup page
+                        Navigator.pushNamed(context, '/signup');
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF515FDD),
@@ -195,3 +181,4 @@ class OnboardingScreen extends StatelessWidget {
     );
   }
 }
+

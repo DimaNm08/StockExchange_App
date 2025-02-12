@@ -1,18 +1,19 @@
-name: stockwave
-description: A stock exchange app
+name: stockexchange_app
+description: A stock trading application.
+
 publish_to: 'none'
 
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  fl_chart: ^0.65.0
   cupertino_icons: ^1.0.2
-  http: ^0.13.6  # or the latest version
+  fl_chart: ^0.65.0
+  http: ^0.13.6  # Added http package for API requests
 
 dev_dependencies:
   flutter_test:
@@ -21,3 +22,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - lib/assets/app_preview.png
+
