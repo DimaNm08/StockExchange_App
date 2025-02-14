@@ -126,7 +126,8 @@ class OnboardingScreen extends StatelessWidget {
                     // Sign In Button
                     OutlinedButton(
                       onPressed: () {
-                        // Handle sign in (you can implement this later)
+                        // Navigate to the sign-in page
+                        Navigator.pushNamed(context, '/signin');
                       },
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 56),
@@ -149,7 +150,7 @@ class OnboardingScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
-                    // Sign Up Button (Modified)
+                    // Sign Up Button
                     ElevatedButton(
                       onPressed: () {
                         // Navigate to the signup page
