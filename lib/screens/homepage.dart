@@ -28,7 +28,7 @@ class HomePage extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNavBar(),
+      bottomNavigationBar: _buildBottomNavBar(context),
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
         child: const Icon(Icons.add),
@@ -310,7 +310,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildBottomNavBar() {
+  Widget _buildBottomNavBar(BuildContext context) {
     return BottomAppBar(
       shape: const CircularNotchedRectangle(),
       notchMargin: 8,
@@ -321,7 +321,12 @@ class HomePage extends StatelessWidget {
           IconButton(icon: const Icon(Icons.search), onPressed: () {}),
           const SizedBox(width: 32),
           IconButton(icon: const Icon(Icons.bar_chart), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.person), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              Navigator.pushNamed(context, '/account');
+            },
+          ),
         ],
       ),
     );

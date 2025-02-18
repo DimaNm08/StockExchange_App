@@ -3,6 +3,7 @@ import '../screens/onboarding.dart';
 import '../screens/signup.dart';
 import '../screens/homepage.dart';
 import '../screens/signin.dart';
+import '../screens/account.dart';
 
 void main() {
   runApp(const MyApp());
@@ -26,6 +27,7 @@ class MyApp extends StatelessWidget {
         '/signup': (context) => const SignUpPage(),
         '/signin': (context) => const SignInScreen(),
         '/homepage': (context) => const HomePage(),
+        '/account': (context) => const AccountPage(),
       },
     );
   }
