@@ -4,6 +4,7 @@ import '../screens/signup.dart';
 import '../screens/homepage.dart';
 import '../screens/signin.dart';
 import '../screens/account.dart';
+import '../screens/search_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -28,6 +29,7 @@ class MyApp extends StatelessWidget {
         '/signin': (context) => const SignInScreen(),
         '/homepage': (context) => const HomePage(),
         '/account': (context) => const AccountPage(),
+        '/search': (context) => const SearchPage(),
       },
     );
   }
