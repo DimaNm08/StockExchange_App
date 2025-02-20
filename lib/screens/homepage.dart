@@ -325,7 +325,12 @@ class HomePage extends StatelessWidget {
             },
           ),
           const SizedBox(width: 32),
-          IconButton(icon: const Icon(Icons.bar_chart), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            onPressed: () {
+              Navigator.pushNamed(context, '/portfolio');
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
