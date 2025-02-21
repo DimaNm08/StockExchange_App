@@ -71,7 +71,7 @@ class AccountPage extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: const Color(0xFF3E52C1),
                       image: DecorationImage(
-                        image: NetworkImage('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Stockwave___Stock_App_UI_Kit__Community_-Bmmqt7QI4n9CH5kbaTpHvOumUZer5n.png'),
+                        image: NetworkImage('https://example.com/profile_image.png'),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -154,36 +154,41 @@ class AccountPage extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Bottom Navigation Bar
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    top: BorderSide(
-                      color: Colors.grey.shade200,
-                    ),
-                  ),
-                ),
-                height: 64,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem(Icons.home_outlined),
-                    _buildNavItem(Icons.pie_chart_outline),
-                    _buildFloatingNavItem(Icons.people),
-                    _buildNavItem(Icons.trending_up),
-                    _buildNavItem(Icons.person_outline),
-                  ],
-                ),
-              ),
-            ),
           ],
         ),
+      ),
+      bottomNavigationBar: _buildBottomNavBar(context),
+    );
+  }
+
+  Widget _buildBottomNavBar(BuildContext context) {
+    return BottomAppBar(
+      shape: const CircularNotchedRectangle(),
+      notchMargin: 8,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.home),
+            onPressed: () {
+              Navigator.pushNamed(context, '/homepage');
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              Navigator.pushNamed(context, '/search');
+            },
+          ),
+          const SizedBox(width: 32),
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            onPressed: () {
+              Navigator.pushNamed(context, '/portfolio');
+            },
+          ),
+          IconButton(icon: const Icon(Icons.person), onPressed: () {}),
+        ],
       ),
     );
   }
@@ -206,31 +211,6 @@ class AccountPage extends StatelessWidget {
           ),
           trailing ?? const Icon(Icons.chevron_right, color: Color(0xFF718096)),
         ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon) {
-    return IconButton(
-      icon: Icon(icon),
-      color: const Color(0xFF718096),
-      onPressed: () {},
-    );
-  }
-
-  Widget _buildFloatingNavItem(IconData icon) {
-    return Transform.translate(
-      offset: const Offset(0, -15),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: const BoxDecoration(
-          color: Color(0xFF3E52C1),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          icon,
-          color: Colors.white,
-        ),
       ),
     );
   }
