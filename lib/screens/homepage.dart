@@ -30,7 +30,9 @@ class HomePage extends StatelessWidget {
       ),
       bottomNavigationBar: _buildBottomNavBar(context),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: () {
+          Navigator.pushNamed(context, '/buy_stocks');
+        },
         child: const Icon(Icons.add),
         backgroundColor: Colors.blue,
       ),
@@ -340,6 +342,11 @@ class HomePage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // This page will be used to buy stocks or indexes
+  void _navigateToBuyStocksPage(BuildContext context) {
+    Navigator.pushNamed(context, '/buy_stocks');
   }
 }
 

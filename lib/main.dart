@@ -6,6 +6,7 @@ import '../screens/signin.dart';
 import '../screens/account.dart';
 import '../screens/search_page.dart';
 import '../screens/portofolio_page.dart';
+import '../screens/buy_stocks_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -32,6 +33,7 @@ class MyApp extends StatelessWidget {
         '/account': (context) => const AccountPage(),
         '/search': (context) => const SearchPage(),
         '/portfolio': (context) => const PortfolioPage(),
+        '/buy_stocks': (context) => const BuyStocksPage(),
       },
     );
   }
