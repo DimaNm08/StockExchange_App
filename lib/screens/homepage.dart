@@ -1,32 +1,188 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../services/alpha_vantage_service.dart';
+import '../models/stock_quote.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
+
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final AlphaVantageService _apiService = AlphaVantageService();
+  bool _isLoading = true;
+  List<StockQuote> _watchlistQuotes = [];
+  List<StockQuote> _popularStockQuotes = [];
+  List<StockQuote> _marketIndices = [];
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+  
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      // Load watchlist stocks
+      List<String> watchlistSymbols = ['AMZN', 'ADBE'];
+      List<StockQuote> watchlist = await _apiService.getTopMovers(watchlistSymbols);
+      
+      // Load popular stocks
+      List<String> popularStocks = ['NFLX', 'AAPL', 'META'];
+      List<StockQuote> popular = await _apiService.getTopMovers(popularStocks);
+      
+      // Load market indices
+      List<StockQuote> indices = await _apiService.getMarketIndices();
+      
+      setState(() {
+        _watchlistQuotes = watchlist;
+        _popularStockQuotes = popular;
+        _marketIndices = indices;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      
+      // Use fallback data if API fails
+      _loadFallbackData();
+    }
+  }
+  
+  void _loadFallbackData() {
+    // Fallback data for watchlist
+    _watchlistQuotes = [
+      StockQuote(
+        symbol: 'AMZN',
+        open: 178.15,
+        high: 180.00,
+        low: 177.00,
+        price: 178.15,
+        volume: 12345678,
+        latestTradingDay: '2023-05-01',
+        previousClose: 179.50,
+        change: -1.35,
+        changePercent: -0.0085,
+      ),
+      StockQuote(
+        symbol: 'ADBE',
+        open: 420.50,
+        high: 425.00,
+        low: 418.00,
+        price: 420.50,
+        volume: 2345678,
+        latestTradingDay: '2023-05-01',
+        previousClose: 419.50,
+        change: 1.00,
+        changePercent: 0.0022,
+      ),
+    ];
+    
+    // Fallback data for popular stocks
+    _popularStockQuotes = [
+      StockQuote(
+        symbol: 'NFLX',
+        open: 605.88,
+        high: 610.00,
+        low: 600.00,
+        price: 605.88,
+        volume: 3456789,
+        latestTradingDay: '2023-05-01',
+        previousClose: 598.20,
+        change: 7.68,
+        changePercent: 0.0128,
+      ),
+      StockQuote(
+        symbol: 'AAPL',
+        open: 178.72,
+        high: 180.00,
+        low: 177.00,
+        price: 178.72,
+        volume: 45678901,
+        latestTradingDay: '2023-05-01',
+        previousClose: 177.60,
+        change: 1.12,
+        changePercent: 0.0063,
+      ),
+      StockQuote(
+        symbol: 'META',
+        open: 474.99,
+        high: 480.00,
+        low: 470.00,
+        price: 474.99,
+        volume: 5678901,
+        latestTradingDay: '2023-05-01',
+        previousClose: 470.20,
+        change: 4.79,
+        changePercent: 0.0089,
+      ),
+    ];
+    
+    // Fallback data for market indices
+    _marketIndices = [
+      StockQuote(
+        symbol: 'SPY',
+        open: 510.34,
+        high: 512.00,
+        low: 508.00,
+        price: 510.34,
+        volume: 67890123,
+        latestTradingDay: '2023-05-01',
+        previousClose: 507.50,
+        change: 2.84,
+        changePercent: 0.0056,
+      ),
+      StockQuote(
+        symbol: 'DIA',
+        open: 385.67,
+        high: 388.00,
+        low: 384.00,
+        price: 385.67,
+        volume: 7890123,
+        latestTradingDay: '2023-05-01',
+        previousClose: 382.90,
+        change: 2.77,
+        changePercent: 0.0071,
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
                 children: [
-                  _buildPortfolioValue(),
-                  const SizedBox(height: 24),
-                  _buildMarketIndices(),
-                  const SizedBox(height: 24),
-                  _buildWatchlist(),
-                  const SizedBox(height: 24),
-                  _buildStocksList(),
+                  _buildHeader(),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: _loadData,
+                      child: ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          _buildPortfolioValue(),
+                          const SizedBox(height: 24),
+                          _buildMarketIndices(),
+                          const SizedBox(height: 24),
+                          _buildWatchlist(),
+                          const SizedBox(height: 24),
+                          _buildStocksList(),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            ),
-          ],
-        ),
       ),
       bottomNavigationBar: _buildBottomNavBar(context),
       floatingActionButton: FloatingActionButton(
@@ -180,17 +336,17 @@ class HomePage extends StatelessWidget {
       children: [
         Expanded(
           child: _buildIndexCard(
-            'S&P 500',
-            '+0.56%',
-            Colors.green,
+            _marketIndices.isNotEmpty ? _marketIndices[0].symbol : 'S&P 500',
+            _marketIndices.isNotEmpty ? _marketIndices[0].changePercentFormatted : '+0.56%',
+            _marketIndices.isNotEmpty && _marketIndices[0].isPositive ? Colors.green : Colors.red,
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
           child: _buildIndexCard(
-            'DOW',
-            '+0.71%',
-            Colors.green,
+            _marketIndices.length > 1 ? _marketIndices[1].symbol : 'DOW',
+            _marketIndices.length > 1 ? _marketIndices[1].changePercentFormatted : '+0.71%',
+            _marketIndices.length > 1 && _marketIndices[1].isPositive ? Colors.green : Colors.red,
           ),
         ),
       ],
@@ -248,8 +404,13 @@ class HomePage extends StatelessWidget {
             ),
           ],
         ),
-        _buildStockItem('AMZN', 'Amazon, Inc', '-0.85%', Colors.red),
-        _buildStockItem('ADBE', 'Adobe, Inc', '+0.22%', Colors.green),
+        for (var quote in _watchlistQuotes)
+          _buildStockItem(
+            quote.symbol,
+            _getCompanyName(quote.symbol),
+            quote.changePercentFormatted,
+            quote.isPositive ? Colors.green : Colors.red,
+          ),
       ],
     );
   }
@@ -265,9 +426,13 @@ class HomePage extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        _buildStockItem('NFLX', 'Netflix, Inc', '+1.28%', Colors.green),
-        _buildStockItem('AAPL', 'Apple, Inc', '+0.63%', Colors.green),
-        _buildStockItem('FB', 'Meta, Inc', '+0.89%', Colors.green),
+        for (var quote in _popularStockQuotes)
+          _buildStockItem(
+            quote.symbol,
+            _getCompanyName(quote.symbol),
+            quote.changePercentFormatted,
+            quote.isPositive ? Colors.green : Colors.red,
+          ),
       ],
     );
   }
@@ -344,9 +509,26 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // This page will be used to buy stocks or indexes
-  void _navigateToBuyStocksPage(BuildContext context) {
-    Navigator.pushNamed(context, '/buy_stocks');
+  String _getCompanyName(String symbol) {
+    // This is a simple mapping function. In a real app, you might want to store this data
+    // or fetch it from an API
+    Map<String, String> companyNames = {
+      'AAPL': 'Apple Inc.',
+      'MSFT': 'Microsoft Corporation',
+      'GOOGL': 'Alphabet Inc.',
+      'AMZN': 'Amazon.com Inc.',
+      'TSLA': 'Tesla, Inc.',
+      'META': 'Meta Platforms, Inc.',
+      'NFLX': 'Netflix, Inc.',
+      'ADBE': 'Adobe, Inc.',
+      'FB': 'Meta, Inc.',
+      'SPY': 'S&P 500 ETF',
+      'DIA': 'Dow Jones ETF',
+      'QQQ': 'Nasdaq 100 ETF',
+      'IWM': 'Russell 2000 ETF',
+    };
+    
+    return companyNames[symbol] ?? 'Unknown Company';
   }
 }
 

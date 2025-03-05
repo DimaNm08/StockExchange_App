@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../services/alpha_vantage_service.dart';
+import '../models/stock_quote.dart';
+import '../models/stock_search_result.dart';
 
 class BuyStocksPage extends StatefulWidget {
   const BuyStocksPage({Key? key}) : super(key: key);
@@ -8,25 +11,149 @@ class BuyStocksPage extends StatefulWidget {
 }
 
 class _BuyStocksPageState extends State<BuyStocksPage> {
-  final List<Map<String, dynamic>> _availableStocks = [
-    {'symbol': 'AAPL', 'name': 'Apple Inc.', 'price': 178.72, 'change': '+0.63%'},
-    {'symbol': 'MSFT', 'name': 'Microsoft Corporation', 'price': 417.88, 'change': '+1.25%'},
-    {'symbol': 'GOOGL', 'name': 'Alphabet Inc.', 'price': 175.98, 'change': '+0.89%'},
-    {'symbol': 'AMZN', 'name': 'Amazon.com Inc.', 'price': 178.15, 'change': '-0.85%'},
-    {'symbol': 'TSLA', 'name': 'Tesla, Inc.', 'price': 177.67, 'change': '+2.14%'},
-    {'symbol': 'META', 'name': 'Meta Platforms, Inc.', 'price': 474.99, 'change': '+0.89%'},
-    {'symbol': 'NFLX', 'name': 'Netflix, Inc.', 'price': 605.88, 'change': '+1.28%'},
-  ];
-
-  final List<Map<String, dynamic>> _availableIndices = [
-    {'symbol': 'SPY', 'name': 'S&P 500 ETF', 'price': 510.34, 'change': '+0.56%'},
-    {'symbol': 'DIA', 'name': 'Dow Jones ETF', 'price': 385.67, 'change': '+0.71%'},
-    {'symbol': 'QQQ', 'name': 'Nasdaq 100 ETF', 'price': 430.12, 'change': '+0.92%'},
-    {'symbol': 'IWM', 'name': 'Russell 2000 ETF', 'price': 201.45, 'change': '+0.33%'},
-  ];
-
+  final AlphaVantageService _apiService = AlphaVantageService();
+  bool _isLoading = true;
   bool _showStocks = true;
   String _searchQuery = '';
+  
+  List<StockQuote> _stockQuotes = [];
+  List<StockQuote> _indexQuotes = [];
+  List<StockSearchResult> _searchResults = [];
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialData();
+  }
+  
+  Future<void> _loadInitialData() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      // Load popular stocks
+      List<String> popularStocks = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NFLX'];
+      List<StockQuote> quotes = await _apiService.getTopMovers(popularStocks);
+      
+      // Load market indices
+      List<StockQuote> indices = await _apiService.getMarketIndices();
+      
+      setState(() {
+        _stockQuotes = quotes;
+        _indexQuotes = indices;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading initial data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading data: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      
+      // Use fallback data if API fails
+      _loadFallbackData();
+    }
+  }
+  
+  void _loadFallbackData() {
+    // Fallback data in case API fails
+    _stockQuotes = [
+      StockQuote(
+        symbol: 'AAPL',
+        open: 178.72,
+        high: 180.25,
+        low: 177.60,
+        price: 178.72,
+        volume: 65432100,
+        latestTradingDay: '2023-05-01',
+        previousClose: 177.00,
+        change: 1.72,
+        changePercent: 0.0063,
+      ),
+      StockQuote(
+        symbol: 'MSFT',
+        open: 417.88,
+        high: 420.00,
+        low: 415.50,
+        price: 417.88,
+        volume: 23456700,
+        latestTradingDay: '2023-05-01',
+        previousClose: 412.00,
+        change: 5.88,
+        changePercent: 0.0125,
+      ),
+      // Add more fallback data as needed
+    ];
+    
+    _indexQuotes = [
+      StockQuote(
+        symbol: 'SPY',
+        open: 510.34,
+        high: 512.50,
+        low: 508.20,
+        price: 510.34,
+        volume: 78901200,
+        latestTradingDay: '2023-05-01',
+        previousClose: 507.50,
+        change: 2.84,
+        changePercent: 0.0056,
+      ),
+      StockQuote(
+        symbol: 'DIA',
+        open: 385.67,
+        high: 388.00,
+        low: 384.00,
+        price: 385.67,
+        volume: 12345600,
+        latestTradingDay: '2023-05-01',
+        previousClose: 382.90,
+        change: 2.77,
+        changePercent: 0.0071,
+      ),
+      // Add more fallback data as needed
+    ];
+  }
+  
+  Future<void> _searchStocks(String query) async {
+    if (query.isEmpty) {
+      setState(() {
+        _searchResults = [];
+      });
+      return;
+    }
+    
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      List<StockSearchResult> results = await _apiService.searchStocks(query);
+      setState(() {
+        _searchResults = results;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error searching stocks: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error searching stocks: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -40,7 +167,11 @@ class _BuyStocksPageState extends State<BuyStocksPage> {
           _buildSearchBar(),
           _buildToggleButtons(),
           Expanded(
-            child: _buildListView(),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _searchQuery.isNotEmpty && _searchResults.isNotEmpty
+                    ? _buildSearchResultsView()
+                    : _buildListView(),
           ),
         ],
       ),
@@ -62,6 +193,7 @@ class _BuyStocksPageState extends State<BuyStocksPage> {
           setState(() {
             _searchQuery = value;
           });
+          _searchStocks(value);
         },
       ),
     );
@@ -117,19 +249,12 @@ class _BuyStocksPageState extends State<BuyStocksPage> {
     );
   }
 
-  Widget _buildListView() {
-    final dataList = _showStocks ? _availableStocks : _availableIndices;
-    final filteredList = dataList.where((item) {
-      return item['symbol'].toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
-             item['name'].toString().toLowerCase().contains(_searchQuery.toLowerCase());
-    }).toList();
-    
+  Widget _buildSearchResultsView() {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: filteredList.length,
+      itemCount: _searchResults.length,
       itemBuilder: (context, index) {
-        final item = filteredList[index];
-        final isPositive = item['change'].toString().contains('+');
+        final result = _searchResults[index];
         
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -139,21 +264,87 @@ class _BuyStocksPageState extends State<BuyStocksPage> {
             leading: CircleAvatar(
               backgroundColor: Colors.blue[100],
               child: Text(
-                item['symbol'][0],
+                result.symbol[0],
                 style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
               ),
             ),
             title: Text(
-              item['symbol'],
+              result.symbol,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item['name']),
+                Text(result.name),
                 const SizedBox(height: 4),
                 Text(
-                  '\$${item['price']}',
+                  '${result.type} • ${result.region}',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            trailing: ElevatedButton(
+              onPressed: () async {
+                try {
+                  final quote = await _apiService.getQuote(result.symbol);
+                  _showBuyDialog(context, quote);
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error fetching quote: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+              ),
+              child: const Text('BUY'),
+            ),
+            isThreeLine: true,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildListView() {
+    final dataList = _showStocks ? _stockQuotes : _indexQuotes;
+    
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: dataList.length,
+      itemBuilder: (context, index) {
+        final quote = dataList[index];
+        
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          elevation: 2,
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(16),
+            leading: CircleAvatar(
+              backgroundColor: Colors.blue[100],
+              child: Text(
+                quote.symbol[0],
+                style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+              ),
+            ),
+            title: Text(
+              quote.symbol,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_getCompanyName(quote.symbol)),
+                const SizedBox(height: 4),
+                Text(
+                  '\$${quote.price.toStringAsFixed(2)}',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
@@ -163,16 +354,16 @@ class _BuyStocksPageState extends State<BuyStocksPage> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  item['change'],
+                  quote.changePercentFormatted,
                   style: TextStyle(
-                    color: isPositive ? Colors.green : Colors.red,
+                    color: quote.isPositive ? Colors.green : Colors.red,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 8),
                 ElevatedButton(
                   onPressed: () {
-                    _showBuyDialog(context, item);
+                    _showBuyDialog(context, quote);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
@@ -189,7 +380,7 @@ class _BuyStocksPageState extends State<BuyStocksPage> {
     );
   }
 
-  void _showBuyDialog(BuildContext context, Map<String, dynamic> item) {
+  void _showBuyDialog(BuildContext context, StockQuote quote) {
     int quantity = 1;
     
     showDialog(
@@ -198,14 +389,14 @@ class _BuyStocksPageState extends State<BuyStocksPage> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Text('Buy ${item['symbol']}'),
+              title: Text('Buy ${quote.symbol}'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${item['name']} (${item['symbol']})'),
+                  Text('${_getCompanyName(quote.symbol)} (${quote.symbol})'),
                   const SizedBox(height: 8),
-                  Text('Current price: \$${item['price']}'),
+                  Text('Current price: \$${quote.price.toStringAsFixed(2)}'),
                   const SizedBox(height: 16),
                   Row(
                     children: [
@@ -233,7 +424,7 @@ class _BuyStocksPageState extends State<BuyStocksPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Total: \$${(item['price'] * quantity).toStringAsFixed(2)}',
+                    'Total: \$${(quote.price * quantity).toStringAsFixed(2)}',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                 ],
@@ -250,7 +441,7 @@ class _BuyStocksPageState extends State<BuyStocksPage> {
                     // Here you would implement the actual purchase logic
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Successfully purchased $quantity shares of ${item['symbol']}'),
+                        content: Text('Successfully purchased $quantity shares of ${quote.symbol}'),
                         backgroundColor: Colors.green,
                       ),
                     );
@@ -265,6 +456,26 @@ class _BuyStocksPageState extends State<BuyStocksPage> {
         );
       },
     );
+  }
+  
+  String _getCompanyName(String symbol) {
+    // This is a simple mapping function. In a real app, you might want to store this data
+    // or fetch it from an API
+    Map<String, String> companyNames = {
+      'AAPL': 'Apple Inc.',
+      'MSFT': 'Microsoft Corporation',
+      'GOOGL': 'Alphabet Inc.',
+      'AMZN': 'Amazon.com Inc.',
+      'TSLA': 'Tesla, Inc.',
+      'META': 'Meta Platforms, Inc.',
+      'NFLX': 'Netflix, Inc.',
+      'SPY': 'S&P 500 ETF',
+      'DIA': 'Dow Jones ETF',
+      'QQQ': 'Nasdaq 100 ETF',
+      'IWM': 'Russell 2000 ETF',
+    };
+    
+    return companyNames[symbol] ?? 'Unknown Company';
   }
 }
 
