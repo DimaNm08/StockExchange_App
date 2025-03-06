@@ -12,23 +12,6 @@ class OnboardingScreen extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             children: [
-              // Skip Button
-              Align(
-                alignment: Alignment.topRight,
-                child: TextButton(
-                  onPressed: () {
-                    // Navigate to dashboard (you can implement this later)
-                  },
-                  child: const Text(
-                    'Skip',
-                    style: TextStyle(
-                      color: Color(0xFF515FDD),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
 
               // Main Content
               Expanded(

@@ -196,24 +196,6 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // Social Buttons
-                _buildSocialButton(
-                  onPressed: () {
-                    // Handle Google sign in
-                  },
-                  text: 'Continue with Google',
-                  icon: 'assets/google_logo.png',
-                ),
-                const SizedBox(height: 16),
-                _buildSocialButton(
-                  onPressed: () {
-                    // Handle Apple sign in
-                  },
-                  text: 'Continue with Apple',
-                  icon: 'assets/apple_logo.png',
-                ),
-                const SizedBox(height: 32),
-
                 // Sign Up Link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

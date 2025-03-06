@@ -69,10 +69,7 @@ class SignUpPage extends StatelessWidget {
                           style: TextStyle(color: Color(0xFF666D80)),
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      _buildButton(context, 'Continue with Google', isOutlined: true, isGoogle: true),
-                      const SizedBox(height: 16),
-                      _buildButton(context, 'Continue with Apple', isOutlined: true, isApple: true),
+                     
                       const SizedBox(height: 24),
                       Center(
                         child: RichText(

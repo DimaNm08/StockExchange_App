@@ -6,7 +6,7 @@ import '../models/stock_search_result.dart';
 
 class AlphaVantageService {
   static const String baseUrl = 'https://www.alphavantage.co/query';
-  static const String apiKey = 'UT2ZJSZW1KPCR5P0'; // Replace with your Alpha Vantage API key
+  static const String apiKey = 'KGU3IX75YL0D4RJD'; // Replace with your Alpha Vantage API key
   
   // Get real-time quote for a symbol
   Future<StockQuote> getQuote(String symbol) async {
