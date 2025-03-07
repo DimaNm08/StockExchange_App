@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class SignUpPage extends StatelessWidget {
-  const SignUpPage({Key? key}) : super(key: key);
+class SignupScreen extends StatelessWidget {
+  const SignupScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -69,22 +69,30 @@ class SignUpPage extends StatelessWidget {
                           style: TextStyle(color: Color(0xFF666D80)),
                         ),
                       ),
-                     
+                      const SizedBox(height: 24),
+                      _buildButton(context, 'Continue with Google', isOutlined: true, isGoogle: true),
+                      const SizedBox(height: 16),
+                      _buildButton(context, 'Continue with Apple', isOutlined: true, isApple: true),
                       const SizedBox(height: 24),
                       Center(
-                        child: RichText(
-                          text: TextSpan(
-                            text: 'Already have an account? ',
-                            style: const TextStyle(color: Color(0xFF666D80)),
-                            children: [
-                              TextSpan(
-                                text: 'Sign In',
-                                style: const TextStyle(
-                                  color: Color(0xFF3E52C1),
-                                  fontWeight: FontWeight.bold,
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/signin');
+                          },
+                          child: RichText(
+                            text: const TextSpan(
+                              text: 'Already have an account? ',
+                              style: TextStyle(color: Color(0xFF666D80)),
+                              children: [
+                                TextSpan(
+                                  text: 'Sign In',
+                                  style: TextStyle(
+                                    color: Color(0xFF3E52C1),
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -104,7 +112,7 @@ class SignUpPage extends StatelessWidget {
       obscureText: isPassword,
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: const TextStyle(color: Color(0xFFECEFF3)),
+        hintStyle: const TextStyle(color: Color(0xFF666D80)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: Color(0xFFECEFF3)),
@@ -159,7 +167,7 @@ class SignUpPage extends StatelessWidget {
           : ElevatedButton(
               onPressed: () {
                 if (text == 'Continue') {
-                  Navigator.pushReplacementNamed(context, '/homepage');
+                  Navigator.pushReplacementNamed(context, '/account_selection');
                 }
               },
               style: ElevatedButton.styleFrom(

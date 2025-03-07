@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import '../services/user_service.dart';
 
-class AccountPage extends StatelessWidget {
-  const AccountPage({Key? key}) : super(key: key);
+class AccountScreen extends StatelessWidget {
+  const AccountScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final user = UserService().currentUser;
+    final isDemo = user?.isDemo ?? false;
+    final name = isDemo ? (user?.loginName ?? 'Demo User') : 'Guest User';
+    final email = isDemo ? (user?.email ?? 'demo@example.com') : '';
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -70,28 +76,49 @@ class AccountPage extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: const Color(0xFF3E52C1),
-                      image: DecorationImage(
-                        image: NetworkImage('https://example.com/profile_image.png'),
-                        fit: BoxFit.cover,
+                    ),
+                    child: Center(
+                      child: Icon(
+                        isDemo ? Icons.person : Icons.person_outline,
+                        size: 48,
+                        color: Colors.white,
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Dumitru Nimerenco',
-                    style: TextStyle(
+                  Text(
+                    name,
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'dumitrunimerenco@gmail.com',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF718096),
+                  if (email.isNotEmpty)
+                    Text(
+                      email,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF718096),
+                      ),
                     ),
-                  ),
+                  if (isDemo)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3E52C1).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Text(
+                        'DEMO ACCOUNT',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF3E52C1),
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 24),
 
                   // Invite Friends Card
@@ -150,6 +177,32 @@ class AccountPage extends StatelessWidget {
                   ),
                   _buildMenuItem(Icons.settings, 'Settings'),
                   _buildMenuItem(Icons.help_outline, 'FAQ'),
+                  
+                  // Sign Out Button
+                  if (isDemo || UserService().isLoggedIn)
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            await UserService().clearUser();
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              '/account_selection',
+                              (route) => false,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red[50],
+                            foregroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text('Sign Out'),
+                        ),
+                      ),
+                    ),
+                  
                   const SizedBox(height: 80), // Space for bottom navigation
                 ],
               ),

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../services/alpha_vantage_service.dart';
+import '../services/twelve_data_service.dart';
 import '../models/stock_quote.dart';
+import '../services/user_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -11,7 +12,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final AlphaVantageService _apiService = AlphaVantageService();
+  final TwelveDataService _apiService = TwelveDataService();
   bool _isLoading = true;
   List<StockQuote> _watchlistQuotes = [];
   List<StockQuote> _popularStockQuotes = [];
@@ -258,78 +259,108 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildPortfolioValue() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Portfolio value',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.grey,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            const Text(
-              '\$13,240.11',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
+  final user = UserService().currentUser;
+  final balance = user?.balance ?? 13240.11; // Default value if no user
+  final isDemo = user?.isDemo ?? false;
+  
+  // Calculate a random daily change for demo purposes
+  final changePercent = 0.012; // 1.2%
+  final change = balance * changePercent;
+  
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          const Text(
+            'Portfolio value',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
             ),
-            const SizedBox(width: 8),
+          ),
+          if (isDemo)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              margin: const EdgeInsets.only(left: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.green[50],
+                color: Colors.blue[50],
                 borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.blue[200]!),
               ),
-              child: Text(
-                '+1.2%',
+              child: const Text(
+                'DEMO',
                 style: TextStyle(
-                  color: Colors.green[700],
-                  fontSize: 14,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
                 ),
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 100,
-          child: LineChart(
-            LineChartData(
-              gridData: FlGridData(show: false),
-              titlesData: FlTitlesData(show: false),
-              borderData: FlBorderData(show: false),
-              lineBarsData: [
-                LineChartBarData(
-                  spots: [
-                    const FlSpot(0, 3),
-                    const FlSpot(2.6, 2),
-                    const FlSpot(4.9, 5),
-                    const FlSpot(6.8, 3.1),
-                    const FlSpot(8, 4),
-                    const FlSpot(9.5, 3),
-                    const FlSpot(11, 4),
-                  ],
-                  isCurved: true,
-                  color: Colors.green,
-                  barWidth: 2,
-                  dotData: FlDotData(show: false),
-                  belowBarData: BarAreaData(
-                    show: true,
-                    color: Colors.green.withOpacity(0.1),
-                  ),
-                ),
-              ],
+        ],
+      ),
+      const SizedBox(height: 8),
+      Row(
+        children: [
+          Text(
+            '\$${balance.toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
             ),
           ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.green[50],
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              '+${(changePercent * 100).toStringAsFixed(1)}% (\$${change.toStringAsFixed(2)})',
+              style: TextStyle(
+                color: Colors.green[700],
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      SizedBox(
+        height: 100,
+        child: LineChart(
+          LineChartData(
+            gridData: FlGridData(show: false),
+            titlesData: FlTitlesData(show: false),
+            borderData: FlBorderData(show: false),
+            lineBarsData: [
+              LineChartBarData(
+                spots: [
+                  const FlSpot(0, 3),
+                  const FlSpot(2.6, 2),
+                  const FlSpot(4.9, 5),
+                  const FlSpot(6.8, 3.1),
+                  const FlSpot(8, 4),
+                  const FlSpot(9.5, 3),
+                  const FlSpot(11, 4),
+                ],
+                isCurved: true,
+                color: Colors.green,
+                barWidth: 2,
+                dotData: FlDotData(show: false),
+                belowBarData: BarAreaData(
+                  show: true,
+                  color: Colors.green.withOpacity(0.1),
+                ),
+              ),
+            ],
+          ),
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 
   Widget _buildMarketIndices() {
     return Row(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/alpha_vantage_service.dart';
-import '../models/stock_quote.dart';
 import '../models/stock_search_result.dart';
+import '../services/twelve_data_service.dart';
 
 class BuyStocksPage extends StatefulWidget {
   const BuyStocksPage({Key? key}) : super(key: key);
@@ -11,471 +10,251 @@ class BuyStocksPage extends StatefulWidget {
 }
 
 class _BuyStocksPageState extends State<BuyStocksPage> {
-  final AlphaVantageService _apiService = AlphaVantageService();
-  bool _isLoading = true;
-  bool _showStocks = true;
-  String _searchQuery = '';
-  
-  List<StockQuote> _stockQuotes = [];
-  List<StockQuote> _indexQuotes = [];
+  final TwelveDataService _apiService = TwelveDataService();
+  final TextEditingController _searchController = TextEditingController();
   List<StockSearchResult> _searchResults = [];
-  
+  bool _isLoading = false;
+  String _errorMessage = '';
+  bool _showStocks = true; // true for stocks, false for ETFs/indices
+
   @override
   void initState() {
     super.initState();
-    _loadInitialData();
+    // Load some initial popular stocks
+    _loadInitialStocks();
   }
-  
-  Future<void> _loadInitialData() async {
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadInitialStocks() async {
     setState(() {
       _isLoading = true;
+      _errorMessage = '';
     });
-    
+
     try {
-      // Load popular stocks
-      List<String> popularStocks = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NFLX'];
-      List<StockQuote> quotes = await _apiService.getTopMovers(popularStocks);
-      
-      // Load market indices
-      List<StockQuote> indices = await _apiService.getMarketIndices();
-      
-      setState(() {
-        _stockQuotes = quotes;
-        _indexQuotes = indices;
-        _isLoading = false;
-      });
-    } catch (e) {
-      print('Error loading initial data: $e');
-      setState(() {
-        _isLoading = false;
-      });
-      
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading data: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      
-      // Use fallback data if API fails
-      _loadFallbackData();
-    }
-  }
-  
-  void _loadFallbackData() {
-    // Fallback data in case API fails
-    _stockQuotes = [
-      StockQuote(
-        symbol: 'AAPL',
-        open: 178.72,
-        high: 180.25,
-        low: 177.60,
-        price: 178.72,
-        volume: 65432100,
-        latestTradingDay: '2023-05-01',
-        previousClose: 177.00,
-        change: 1.72,
-        changePercent: 0.0063,
-      ),
-      StockQuote(
-        symbol: 'MSFT',
-        open: 417.88,
-        high: 420.00,
-        low: 415.50,
-        price: 417.88,
-        volume: 23456700,
-        latestTradingDay: '2023-05-01',
-        previousClose: 412.00,
-        change: 5.88,
-        changePercent: 0.0125,
-      ),
-      // Add more fallback data as needed
-    ];
-    
-    _indexQuotes = [
-      StockQuote(
-        symbol: 'SPY',
-        open: 510.34,
-        high: 512.50,
-        low: 508.20,
-        price: 510.34,
-        volume: 78901200,
-        latestTradingDay: '2023-05-01',
-        previousClose: 507.50,
-        change: 2.84,
-        changePercent: 0.0056,
-      ),
-      StockQuote(
-        symbol: 'DIA',
-        open: 385.67,
-        high: 388.00,
-        low: 384.00,
-        price: 385.67,
-        volume: 12345600,
-        latestTradingDay: '2023-05-01',
-        previousClose: 382.90,
-        change: 2.77,
-        changePercent: 0.0071,
-      ),
-      // Add more fallback data as needed
-    ];
-  }
-  
-  Future<void> _searchStocks(String query) async {
-    if (query.isEmpty) {
-      setState(() {
-        _searchResults = [];
-      });
-      return;
-    }
-    
-    setState(() {
-      _isLoading = true;
-    });
-    
-    try {
-      List<StockSearchResult> results = await _apiService.searchStocks(query);
+      // Load popular stocks initially
+      final results = await _apiService.searchStocks(_showStocks ? 'AAPL' : 'SPY');
       setState(() {
         _searchResults = results;
         _isLoading = false;
       });
     } catch (e) {
-      print('Error searching stocks: $e');
       setState(() {
+        _errorMessage = 'Failed to load initial stocks: $e';
         _isLoading = false;
       });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error searching stocks: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
-  
+
+  Future<void> _performSearch(String query) async {
+    if (query.isEmpty) {
+      _loadInitialStocks();
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      final results = await _apiService.searchStocks(query);
+      
+      // Filter by type if needed
+      final filteredResults = _showStocks
+          ? results.where((result) => result.type.toLowerCase().contains('equity')).toList()
+          : results.where((result) => 
+              result.type.toLowerCase().contains('etf') || 
+              result.type.toLowerCase().contains('index')).toList();
+      
+      setState(() {
+        _searchResults = filteredResults;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Search failed: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Buy Stocks & ETFs'),
-        backgroundColor: Colors.blue,
       ),
       body: Column(
         children: [
-          _buildSearchBar(),
-          _buildToggleButtons(),
+          // Toggle between stocks and ETFs
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment<bool>(
+                  value: true,
+                  label: Text('Stocks'),
+                  icon: Icon(Icons.trending_up),
+                ),
+                ButtonSegment<bool>(
+                  value: false,
+                  label: Text('ETFs & Indices'),
+                  icon: Icon(Icons.bar_chart),
+                ),
+              ],
+              selected: {_showStocks},
+              onSelectionChanged: (Set<bool> selection) {
+                setState(() {
+                  _showStocks = selection.first;
+                  // Reload with appropriate initial data
+                  _searchController.clear();
+                  _loadInitialStocks();
+                });
+              },
+            ),
+          ),
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                labelText: 'Search for ${_showStocks ? 'stocks' : 'ETFs & indices'}',
+                hintText: 'Enter name or symbol',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _loadInitialStocks();
+                        },
+                      )
+                    : null,
+              ),
+              onChanged: (value) {
+                if (value.length >= 2) {
+                  _performSearch(value);
+                } else if (value.isEmpty) {
+                  _loadInitialStocks();
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Results list
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _searchQuery.isNotEmpty && _searchResults.isNotEmpty
-                    ? _buildSearchResultsView()
-                    : _buildListView(),
+                : _errorMessage.isNotEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(_errorMessage, textAlign: TextAlign.center),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _searchController.text.isEmpty
+                                  ? _loadInitialStocks()
+                                  : _performSearch(_searchController.text),
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _searchResults.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No ${_showStocks ? 'stocks' : 'ETFs'} found. Try a different search term.',
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: _searchResults.length,
+                            itemBuilder: (context, index) {
+                              final result = _searchResults[index];
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  child: Text(result.symbol.substring(0, 1)),
+                                ),
+                                title: Text(result.symbol),
+                                subtitle: Text(result.name),
+                                trailing: ElevatedButton(
+                                  onPressed: () {
+                                    // Show buy dialog
+                                    _showBuyDialog(result);
+                                  },
+                                  child: const Text('Buy'),
+                                ),
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/stock_details',
+                                    arguments: result.symbol,
+                                  );
+                                },
+                              );
+                            },
+                          ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: TextField(
-        decoration: InputDecoration(
-          hintText: 'Search stocks or ETFs...',
-          prefixIcon: const Icon(Icons.search),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-        ),
-        onChanged: (value) {
-          setState(() {
-            _searchQuery = value;
-          });
-          _searchStocks(value);
-        },
-      ),
-    );
-  }
-
-  Widget _buildToggleButtons() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _showStocks = true;
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _showStocks ? Colors.blue : Colors.grey[300],
-                foregroundColor: _showStocks ? Colors.white : Colors.black,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(8),
-                    bottomLeft: Radius.circular(8),
-                  ),
-                ),
-              ),
-              child: const Text('Stocks'),
-            ),
-          ),
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _showStocks = false;
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: !_showStocks ? Colors.blue : Colors.grey[300],
-                foregroundColor: !_showStocks ? Colors.white : Colors.black,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                    topRight: Radius.circular(8),
-                    bottomRight: Radius.circular(8),
-                  ),
-                ),
-              ),
-              child: const Text('ETFs/Indices'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchResultsView() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _searchResults.length,
-      itemBuilder: (context, index) {
-        final result = _searchResults[index];
-        
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: 2,
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(16),
-            leading: CircleAvatar(
-              backgroundColor: Colors.blue[100],
-              child: Text(
-                result.symbol[0],
-                style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-              ),
-            ),
-            title: Text(
-              result.symbol,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(result.name),
-                const SizedBox(height: 4),
-                Text(
-                  '${result.type} • ${result.region}',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-            trailing: ElevatedButton(
-              onPressed: () async {
-                try {
-                  final quote = await _apiService.getQuote(result.symbol);
-                  _showBuyDialog(context, quote);
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error fetching quote: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-              ),
-              child: const Text('BUY'),
-            ),
-            isThreeLine: true,
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildListView() {
-    final dataList = _showStocks ? _stockQuotes : _indexQuotes;
-    
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: dataList.length,
-      itemBuilder: (context, index) {
-        final quote = dataList[index];
-        
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: 2,
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(16),
-            leading: CircleAvatar(
-              backgroundColor: Colors.blue[100],
-              child: Text(
-                quote.symbol[0],
-                style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-              ),
-            ),
-            title: Text(
-              quote.symbol,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_getCompanyName(quote.symbol)),
-                const SizedBox(height: 4),
-                Text(
-                  '\$${quote.price.toStringAsFixed(2)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  quote.changePercentFormatted,
-                  style: TextStyle(
-                    color: quote.isPositive ? Colors.green : Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: () {
-                    _showBuyDialog(context, quote);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                  ),
-                  child: const Text('BUY'),
-                ),
-              ],
-            ),
-            isThreeLine: true,
-          ),
-        );
-      },
-    );
-  }
-
-  void _showBuyDialog(BuildContext context, StockQuote quote) {
-    int quantity = 1;
+  void _showBuyDialog(StockSearchResult stock) {
+    final TextEditingController quantityController = TextEditingController(text: '1');
     
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text('Buy ${quote.symbol}'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('${_getCompanyName(quote.symbol)} (${quote.symbol})'),
-                  const SizedBox(height: 8),
-                  Text('Current price: \$${quote.price.toStringAsFixed(2)}'),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      const Text('Quantity: '),
-                      IconButton(
-                        icon: const Icon(Icons.remove_circle_outline),
-                        onPressed: () {
-                          if (quantity > 1) {
-                            setState(() {
-                              quantity--;
-                            });
-                          }
-                        },
-                      ),
-                      Text('$quantity', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      IconButton(
-                        icon: const Icon(Icons.add_circle_outline),
-                        onPressed: () {
-                          setState(() {
-                            quantity++;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Total: \$${(quote.price * quantity).toStringAsFixed(2)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
-                ],
+      builder: (context) => AlertDialog(
+        title: Text('Buy ${stock.symbol}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Company: ${stock.name}'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: quantityController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Quantity',
+                border: OutlineInputBorder(),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('CANCEL'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // Here you would implement the actual purchase logic
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Purchased ${quantityController.text} shares of ${stock.symbol}'),
+                  backgroundColor: Colors.green,
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    // Here you would implement the actual purchase logic
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Successfully purchased $quantity shares of ${quote.symbol}'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                    Navigator.of(context).pop();
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                  child: const Text('CONFIRM PURCHASE'),
-                ),
-              ],
-            );
-          }
-        );
-      },
+              );
+              Navigator.pop(context);
+            },
+            child: const Text('Confirm Purchase'),
+          ),
+        ],
+      ),
     );
-  }
-  
-  String _getCompanyName(String symbol) {
-    // This is a simple mapping function. In a real app, you might want to store this data
-    // or fetch it from an API
-    Map<String, String> companyNames = {
-      'AAPL': 'Apple Inc.',
-      'MSFT': 'Microsoft Corporation',
-      'GOOGL': 'Alphabet Inc.',
-      'AMZN': 'Amazon.com Inc.',
-      'TSLA': 'Tesla, Inc.',
-      'META': 'Meta Platforms, Inc.',
-      'NFLX': 'Netflix, Inc.',
-      'SPY': 'S&P 500 ETF',
-      'DIA': 'Dow Jones ETF',
-      'QQQ': 'Nasdaq 100 ETF',
-      'IWM': 'Russell 2000 ETF',
-    };
-    
-    return companyNames[symbol] ?? 'Unknown Company';
   }
 }
 

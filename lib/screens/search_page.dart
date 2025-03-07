@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/alpha_vantage_service.dart';
 import '../models/stock_search_result.dart';
+import '../services/twelve_data_service.dart';
 import '../models/stock_quote.dart';
 
 class SearchPage extends StatefulWidget {
@@ -11,88 +11,116 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
+  final TwelveDataService _apiService = TwelveDataService();
   final TextEditingController _searchController = TextEditingController();
-  final AlphaVantageService _apiService = AlphaVantageService();
-  
   List<StockSearchResult> _searchResults = [];
   bool _isLoading = false;
-  
+  String _errorMessage = '';
+  bool _hasSearched = false;
+
   @override
   void initState() {
     super.initState();
+    // Load some initial popular stocks
+    _loadInitialStocks();
   }
-  
-  Future<void> _searchStocks(String query) async {
-    if (query.isEmpty) {
-      setState(() {
-        _searchResults = [];
-      });
-      return;
-    }
-    
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadInitialStocks() async {
     setState(() {
       _isLoading = true;
+      _errorMessage = '';
     });
-    
+
     try {
-      List<StockSearchResult> results = await _apiService.searchStocks(query);
+      // Load popular stocks initially
+      final results = await _apiService.searchStocks('AAPL');
+      setState(() {
+        _searchResults = results;
+        _isLoading = false;
+        _hasSearched = true;
+      });
+    } catch (e) {
+      print('Error loading initial stocks: $e');
+      setState(() {
+        _errorMessage = 'Failed to load initial stocks: $e';
+        _isLoading = false;
+        _hasSearched = true;
+      });
+      
+      // Use fallback data
+      _loadFallbackData();
+    }
+  }
+  
+  void _loadFallbackData() {
+    _searchResults = [
+      StockSearchResult(
+        symbol: 'AAPL',
+        name: 'Apple Inc.',
+        type: 'Equity',
+        region: 'United States',
+        marketOpen: '09:30',
+        marketClose: '16:00',
+        timezone: 'UTC-05',
+        currency: 'USD',
+        matchScore: 1.0,
+      ),
+      StockSearchResult(
+        symbol: 'MSFT',
+        name: 'Microsoft Corporation',
+        type: 'Equity',
+        region: 'United States',
+        marketOpen: '09:30',
+        marketClose: '16:00',
+        timezone: 'UTC-05',
+        currency: 'USD',
+        matchScore: 1.0,
+      ),
+      StockSearchResult(
+        symbol: 'GOOGL',
+        name: 'Alphabet Inc.',
+        type: 'Equity',
+        region: 'United States',
+        marketOpen: '09:30',
+        marketClose: '16:00',
+        timezone: 'UTC-05',
+        currency: 'USD',
+        matchScore: 1.0,
+      ),
+    ];
+  }
+
+  Future<void> _performSearch(String query) async {
+    if (query.isEmpty) {
+      _loadInitialStocks();
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+      _hasSearched = true;
+    });
+
+    try {
+      final results = await _apiService.searchStocks(query);
       setState(() {
         _searchResults = results;
         _isLoading = false;
       });
     } catch (e) {
-      print('Error searching stocks: $e');
+      print('Search failed: $e');
       setState(() {
+        _errorMessage = 'Search failed: $e';
         _isLoading = false;
       });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error searching stocks: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      
-      // Use fallback data if API fails
-      _loadFallbackData(query);
     }
-  }
-  
-  void _loadFallbackData(String query) {
-    List<Map<String, String>> stocks = [
-      {"symbol": "AAPL", "name": "Apple Inc."},
-      {"symbol": "GOOGL", "name": "Alphabet Inc."},
-      {"symbol": "MSFT", "name": "Microsoft Corporation"},
-      {"symbol": "AMZN", "name": "Amazon.com Inc."},
-      {"symbol": "FB", "name": "Meta Platforms, Inc."},
-      {"symbol": "TSLA", "name": "Tesla, Inc."},
-      {"symbol": "NVDA", "name": "NVIDIA Corporation"},
-      {"symbol": "JPM", "name": "JPMorgan Chase & Co."},
-      {"symbol": "V", "name": "Visa Inc."},
-      {"symbol": "JNJ", "name": "Johnson & Johnson"},
-      {"symbol": "WMT", "name": "Walmart Inc."},
-      {"symbol": "MA", "name": "Mastercard Incorporated"},
-      {"symbol": "PG", "name": "Procter & Gamble Company"},
-      {"symbol": "DIS", "name": "The Walt Disney Company"},
-      {"symbol": "ADBE", "name": "Adobe Inc."},
-    ];
-    
-    _searchResults = stocks
-        .where((stock) =>
-            stock["symbol"]!.toLowerCase().contains(query.toLowerCase()) ||
-            stock["name"]!.toLowerCase().contains(query.toLowerCase()))
-        .map((stock) => StockSearchResult(
-              symbol: stock["symbol"]!,
-              name: stock["name"]!,
-              type: "Equity",
-              region: "United States",
-              marketOpen: "09:30",
-              marketClose: "16:00",
-              timezone: "UTC-05",
-              currency: "USD",
-              matchScore: 1.0,
-            ))
-        .toList();
   }
 
   @override
@@ -108,72 +136,126 @@ class _SearchPageState extends State<SearchPage> {
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               controller: _searchController,
-              onChanged: _searchStocks,
               decoration: InputDecoration(
-                hintText: 'Search for stocks...',
+                labelText: 'Search for stocks',
+                hintText: 'Enter company name or symbol',
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _loadInitialStocks();
+                        },
+                      )
+                    : null,
               ),
+              onChanged: (value) {
+                if (value.length >= 2) {
+                  _performSearch(value);
+                } else if (value.isEmpty) {
+                  _loadInitialStocks();
+                }
+              },
             ),
           ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _searchResults.isEmpty && _searchController.text.isNotEmpty
-                    ? const Center(child: Text('No results found'))
-                    : ListView.builder(
-                        itemCount: _searchResults.length,
-                        itemBuilder: (context, index) {
-                          final result = _searchResults[index];
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: Colors.blue[100],
-                              child: Text(
-                                result.symbol[0],
-                                style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-                              ),
+                : _errorMessage.isNotEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(_errorMessage, textAlign: TextAlign.center),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _searchController.text.isEmpty
+                                  ? _loadInitialStocks()
+                                  : _performSearch(_searchController.text),
+                              child: const Text('Retry'),
                             ),
-                            title: Text(result.symbol),
-                            subtitle: Text(result.name),
-                            trailing: const Icon(Icons.arrow_forward_ios),
-                            onTap: () async {
-                              try {
-                                // Show loading indicator
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (BuildContext context) {
-                                    return const Center(
-                                      child: CircularProgressIndicator(),
-                                    );
-                                  },
-                                );
-                                
-                                // Get quote data
-                                StockQuote quote = await _apiService.getQuote(result.symbol);
-                                
-                                // Close loading indicator
-                                Navigator.of(context).pop();
-                                
-                                // Show stock details
-                                _showStockDetails(context, quote, result);
-                              } catch (e) {
-                                // Close loading indicator
-                                Navigator.of(context).pop();
-                                
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error fetching stock details: $e'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            },
-                          );
-                        },
-                      ),
+                          ],
+                        ),
+                      )
+                    : !_hasSearched
+                        ? const Center(
+                            child: Text(
+                              'Search for stocks by name or symbol',
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        : _searchResults.isEmpty
+                            ? const Center(
+                                child: Text(
+                                  'No results found. Try a different search term.',
+                                  textAlign: TextAlign.center,
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: _searchResults.length,
+                                itemBuilder: (context, index) {
+                                  final result = _searchResults[index];
+                                  return Card(
+                                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                    child: ListTile(
+                                      leading: CircleAvatar(
+                                        backgroundColor: Colors.blue[100],
+                                        child: Text(
+                                          result.symbol.substring(0, 1),
+                                          style: const TextStyle(color: Colors.blue),
+                                        ),
+                                      ),
+                                      title: Text(result.symbol),
+                                      subtitle: Text(result.name),
+                                      trailing: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(result.currency),
+                                          const SizedBox(width: 8),
+                                          const Icon(Icons.arrow_forward_ios, size: 16),
+                                        ],
+                                      ),
+                                      onTap: () async {
+                                        try {
+                                          // Show loading indicator
+                                          showDialog(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder: (BuildContext context) {
+                                              return const Center(
+                                                child: CircularProgressIndicator(),
+                                              );
+                                            },
+                                          );
+                                          
+                                          // Get quote data
+                                          StockQuote quote = await _apiService.getQuote(result.symbol);
+                                          
+                                          // Close loading indicator
+                                          Navigator.of(context).pop();
+                                          
+                                          // Show stock details
+                                          _showStockDetails(context, quote, result);
+                                        } catch (e) {
+                                          // Close loading indicator
+                                          Navigator.of(context).pop();
+                                          
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Error fetching stock details: $e'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
           ),
         ],
       ),
@@ -212,7 +294,7 @@ class _SearchPageState extends State<SearchPage> {
       ),
     );
   }
-  
+
   void _showStockDetails(BuildContext context, StockQuote quote, StockSearchResult result) {
     showModalBottomSheet(
       context: context,
@@ -358,7 +440,7 @@ class _SearchPageState extends State<SearchPage> {
       },
     );
   }
-  
+
   Widget _buildStockStat(String label, String value) {
     return Column(
       children: [
@@ -380,7 +462,7 @@ class _SearchPageState extends State<SearchPage> {
       ],
     );
   }
-  
+
   String _formatVolume(int volume) {
     if (volume >= 1000000000) {
       return '${(volume / 1000000000).toStringAsFixed(1)}B';
@@ -391,12 +473,6 @@ class _SearchPageState extends State<SearchPage> {
     } else {
       return volume.toString();
     }
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 }
 
