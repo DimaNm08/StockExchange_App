@@ -87,6 +87,39 @@ class StockSearchResult {
     }
   }
   
+  // Factory for Finnhub format
+  factory StockSearchResult.fromFinnhubJson(Map<String, dynamic> json) {
+    try {
+      return StockSearchResult(
+        symbol: json['symbol'] ?? '',
+        name: json['description'] ?? '',
+        type: json['type'] ?? 'Equity',
+        region: json['exchange'] ?? 'United States',
+        marketOpen: '09:30', // Finnhub doesn't provide this directly
+        marketClose: '16:00', // Finnhub doesn't provide this directly
+        timezone: 'UTC-05', // Finnhub doesn't provide this directly
+        currency: 'USD', // Finnhub search doesn't provide currency
+        matchScore: 1.0, // Finnhub doesn't provide this
+      );
+    } catch (e) {
+      print('Error parsing Finnhub StockSearchResult: $e');
+      print('JSON data: $json');
+      
+      // Return default values with symbol if available
+      return StockSearchResult(
+        symbol: json['symbol'] ?? 'UNKNOWN',
+        name: json['description'] ?? 'Unknown Company',
+        type: 'Equity',
+        region: 'United States',
+        marketOpen: '09:30',
+        marketClose: '16:00',
+        timezone: 'UTC-05',
+        currency: 'USD',
+        matchScore: 1.0,
+      );
+    }
+  }
+  
   Map<String, dynamic> toJson() {
     return {
       'symbol': symbol,

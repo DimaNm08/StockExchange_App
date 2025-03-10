@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/stock_search_result.dart';
-import '../services/twelve_data_service.dart';
+import '../services/finnhub_service.dart';
 import '../models/stock_quote.dart';
 
 class SearchPage extends StatefulWidget {
@@ -11,7 +11,7 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  final TwelveDataService _apiService = TwelveDataService();
+  final FinnhubService _apiService = FinnhubService();
   final TextEditingController _searchController = TextEditingController();
   List<StockSearchResult> _searchResults = [];
   bool _isLoading = false;

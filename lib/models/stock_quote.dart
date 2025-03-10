@@ -93,6 +93,50 @@ class StockQuote {
     }
   }
   
+  // Factory for Finnhub format
+  factory StockQuote.fromFinnhubJson(Map<String, dynamic> json, String symbolValue, Map<String, dynamic> companyInfo) {
+    try {
+      // Finnhub quote endpoint returns:
+      // c: Current price, o: Open price, h: High price, l: Low price
+      // pc: Previous close price, t: Timestamp
+      
+      final currentPrice = _parseDouble(json['c']);
+      final previousClose = _parseDouble(json['pc']);
+      final change = currentPrice - previousClose;
+      final changePercent = previousClose > 0 ? change / previousClose : 0.0;
+      
+      return StockQuote(
+        symbol: symbolValue,
+        open: _parseDouble(json['o']),
+        high: _parseDouble(json['h']),
+        low: _parseDouble(json['l']),
+        price: currentPrice,
+        volume: 0, // Finnhub quote endpoint doesn't return volume, would need separate call
+        latestTradingDay: DateTime.fromMillisecondsSinceEpoch((_parseInt(json['t']) * 1000)).toString().substring(0, 10),
+        previousClose: previousClose,
+        change: change,
+        changePercent: changePercent,
+      );
+    } catch (e) {
+      print('Error parsing Finnhub StockQuote: $e');
+      print('JSON data: $json');
+      
+      // Return a default quote with the symbol
+      return StockQuote(
+        symbol: symbolValue,
+        open: 0.0,
+        high: 0.0,
+        low: 0.0,
+        price: 0.0,
+        volume: 0,
+        latestTradingDay: DateTime.now().toString().substring(0, 10),
+        previousClose: 0.0,
+        change: 0.0,
+        changePercent: 0.0,
+      );
+    }
+  }
+  
   Map<String, dynamic> toJson() {
     return {
       'symbol': symbol,

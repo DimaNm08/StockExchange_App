@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../services/twelve_data_service.dart';
+import '../services/finnhub_service.dart';
 import '../models/stock_quote.dart';
 import '../services/user_service.dart';
 
@@ -12,7 +12,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final TwelveDataService _apiService = TwelveDataService();
+  final FinnhubService _apiService = FinnhubService();
   bool _isLoading = true;
   List<StockQuote> _watchlistQuotes = [];
   List<StockQuote> _popularStockQuotes = [];

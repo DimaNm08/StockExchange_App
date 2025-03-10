@@ -63,6 +63,31 @@ class Stock {
     }
   }
   
+  // Factory for Finnhub format
+  factory Stock.fromFinnhubJson(Map<String, dynamic> json, int index) {
+    try {
+      return Stock(
+        open: _parseDouble(json['o'][index]),
+        high: _parseDouble(json['h'][index]),
+        low: _parseDouble(json['l'][index]),
+        close: _parseDouble(json['c'][index]),
+        volume: _parseInt(json['v'][index]),
+      );
+    } catch (e) {
+      print('Error parsing Finnhub Stock: $e');
+      print('JSON data: $json');
+      
+      // Return default values
+      return Stock(
+        open: 0.0,
+        high: 0.0,
+        low: 0.0,
+        close: 0.0,
+        volume: 0,
+      );
+    }
+  }
+  
   Map<String, dynamic> toJson() {
     return {
       'open': open,

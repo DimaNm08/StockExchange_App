@@ -5,15 +5,15 @@ import '../models/stock.dart';
 import '../models/stock_quote.dart';
 import '../models/stock_search_result.dart';
 
-class TwelveDataService {
-  // Twelve Data API base URL
-  static const String baseUrl = 'https://api.twelvedata.com';
+class FinnhubService {
+  // Finnhub API base URL
+  static const String baseUrl = 'https://finnhub.io/api/v1';
   
-  // Replace with your actual API key from Twelve Data
-  static const String apiKey = 'ce2a3f927e3240f5b2794fb46b4b04db';
+  // Replace with your actual API key from Finnhub
+  static const String apiKey = 'cv7h52hr01qpeciftsp0cv7h52hr01qpeciftspg';
   
   // Rate limiting variables
-  static const int _maxRequestsPerMinute = 8; // Free tier limit
+  static const int _maxRequestsPerMinute = 30; // Finnhub free tier limit
   static final List<DateTime> _requestTimestamps = [];
   static final Map<String, StockQuote> _quoteCache = {}; // Simple cache
   static final Map<String, List<StockSearchResult>> _searchCache = {};
@@ -63,7 +63,7 @@ class TwelveDataService {
       await _respectRateLimit();
       
       final response = await http.get(
-        Uri.parse('$baseUrl/quote?symbol=$symbol&apikey=$apiKey'),
+        Uri.parse('$baseUrl/quote?symbol=$symbol&token=$apiKey'),
       );
       
       if (response.statusCode == 200) {
@@ -72,15 +72,16 @@ class TwelveDataService {
         // Debug the response
         print('Quote response for $symbol: ${response.body}');
         
-        if (data.containsKey('symbol') && !data.containsKey('status') && !data.containsKey('code')) {
-          final quote = StockQuote.fromTwelveDataJson(data);
+        // Get company profile for name
+        final companyInfo = await _getCompanyProfile(symbol);
+        
+        if (data.containsKey('c') && !data.containsKey('error')) {
+          final quote = StockQuote.fromFinnhubJson(data, symbol, companyInfo);
           // Cache the result
           _quoteCache[symbol] = quote;
           return quote;
-        } else if (data.containsKey('code') && data['code'] == 429) {
-          throw Exception('API call frequency limit reached: ${data['message']}');
-        } else if (data.containsKey('status') && data['status'] == 'error') {
-          throw Exception('API error: ${data['message']}');
+        } else if (data.containsKey('error')) {
+          throw Exception('API error: ${data['error']}');
         } else {
           throw Exception('Failed to load quote data');
         }
@@ -91,6 +92,28 @@ class TwelveDataService {
       print('Error fetching quote for $symbol: $e');
       // Return a fallback quote for the symbol
       return _getFallbackQuote(symbol);
+    }
+  }
+  
+  // Get company profile
+  Future<Map<String, dynamic>> _getCompanyProfile(String symbol) async {
+    try {
+      // Respect rate limit before making request
+      await _respectRateLimit();
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl/stock/profile2?symbol=$symbol&token=$apiKey'),
+      );
+      
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return data;
+      } else {
+        return {};
+      }
+    } catch (e) {
+      print('Error fetching company profile for $symbol: $e');
+      return {};
     }
   }
   
@@ -114,7 +137,7 @@ class TwelveDataService {
       await _respectRateLimit();
       
       final response = await http.get(
-        Uri.parse('$baseUrl/symbol_search?symbol=$keywords&apikey=$apiKey'),
+        Uri.parse('$baseUrl/search?q=$keywords&token=$apiKey'),
       );
       
       if (response.statusCode == 200) {
@@ -123,18 +146,16 @@ class TwelveDataService {
         // Debug the response
         print('Search response for $keywords: ${response.body}');
         
-        if (data.containsKey('data') && data['data'] is List) {
-          List<dynamic> matches = data['data'];
-          final results = matches.map((match) => StockSearchResult.fromTwelveDataJson(match)).toList();
+        if (data.containsKey('result') && data['result'] is List) {
+          List<dynamic> matches = data['result'];
+          final results = matches.map((match) => StockSearchResult.fromFinnhubJson(match)).toList();
           
           // Cache the results
           _searchCache[keywords] = results;
           
           return results;
-        } else if (data.containsKey('code') && data['code'] == 429) {
-          throw Exception('API call frequency limit reached: ${data['message']}');
-        } else if (data.containsKey('status') && data['status'] == 'error') {
-          throw Exception('API error: ${data['message']}');
+        } else if (data.containsKey('error')) {
+          throw Exception('API error: ${data['error']}');
         } else {
           return _getFallbackSearchResults(keywords);
         }
@@ -147,10 +168,10 @@ class TwelveDataService {
     }
   }
   
-  // Get time series data for a symbol
-  Future<Map<String, Stock>> getTimeSeries(String symbol, {String interval = '1day', int outputSize = 30}) async {
+  // Get time series data for a symbol (candles endpoint in Finnhub)
+  Future<Map<String, Stock>> getTimeSeries(String symbol, {String resolution = 'D', int count = 30}) async {
     // Create a cache key
-    final cacheKey = '$symbol-$interval-$outputSize';
+    final cacheKey = '$symbol-$resolution-$count';
     
     // Check cache first (cache valid for 1 day)
     if (_timeSeriesCache.containsKey(cacheKey)) {
@@ -169,30 +190,46 @@ class TwelveDataService {
       // Respect rate limit before making request
       await _respectRateLimit();
       
+      // Calculate from and to timestamps
+      final to = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final from = to - (86400 * count); // count days in seconds
+      
       final response = await http.get(
-        Uri.parse('$baseUrl/time_series?symbol=$symbol&interval=$interval&outputsize=$outputSize&apikey=$apiKey'),
+        Uri.parse('$baseUrl/stock/candle?symbol=$symbol&resolution=$resolution&from=$from&to=$to&token=$apiKey'),
       );
       
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
         
-        if (data.containsKey('values') && data['values'] is List) {
-          final List<dynamic> values = data['values'];
+        if (data.containsKey('c') && data['c'] is List && data['s'] == 'ok') {
+          final List<dynamic> closes = data['c'];
+          final List<dynamic> opens = data['o'];
+          final List<dynamic> highs = data['h'];
+          final List<dynamic> lows = data['l'];
+          final List<dynamic> volumes = data['v'];
+          final List<dynamic> timestamps = data['t'];
+          
           final Map<String, Stock> result = {};
           
-          for (var item in values) {
-            String date = item['datetime'];
-            result[date] = Stock.fromTwelveDataJson(item);
+          for (var i = 0; i < closes.length; i++) {
+            // Convert timestamp to date string
+            final date = DateTime.fromMillisecondsSinceEpoch(timestamps[i] * 1000).toString().substring(0, 10);
+            
+            result[date] = Stock(
+              open: _parseDouble(opens[i]),
+              high: _parseDouble(highs[i]),
+              low: _parseDouble(lows[i]),
+              close: _parseDouble(closes[i]),
+              volume: _parseInt(volumes[i]),
+            );
           }
           
           // Cache the results
           _timeSeriesCache[cacheKey] = result;
           
           return result;
-        } else if (data.containsKey('code') && data['code'] == 429) {
-          throw Exception('API call frequency limit reached: ${data['message']}');
-        } else if (data.containsKey('status') && data['status'] == 'error') {
-          throw Exception('API error: ${data['message']}');
+        } else if (data.containsKey('error')) {
+          throw Exception('API error: ${data['error']}');
         } else {
           return _getFallbackTimeSeries(symbol);
         }
@@ -490,6 +527,35 @@ class TwelveDataService {
     }
     
     return result;
+  }
+  
+  // Helper methods for parsing
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      try {
+        return double.parse(value);
+      } catch (e) {
+        return 0.0;
+      }
+    }
+    return 0.0;
+  }
+  
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) {
+      try {
+        return int.parse(value);
+      } catch (e) {
+        return 0;
+      }
+    }
+    return 0;
   }
 }
 
