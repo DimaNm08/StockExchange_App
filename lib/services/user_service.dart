@@ -1,4 +1,6 @@
 import '../models/user.dart';
+import '../models/portfolio_item.dart';
+import '../models/stock_search_result.dart';
 
 class UserService {
   User? _currentUser;
@@ -52,6 +54,65 @@ class UserService {
       email: email,
       balance: balance,
     ));
+  }
+  
+  // Add a stock to the user's portfolio
+  Future<bool> addToPortfolio(StockSearchResult stock, int quantity, double price) async {
+    if (_currentUser == null) return false;
+    
+    // Create a new portfolio item
+    final portfolioItem = PortfolioItem(
+      symbol: stock.symbol,
+      name: stock.name,
+      quantity: quantity,
+      purchasePrice: price,
+      purchaseDate: DateTime.now(),
+    );
+    
+    // Calculate the total cost
+    final totalCost = price * quantity;
+    
+    // Check if user has enough balance
+    if (_currentUser!.balance < totalCost) return false;
+    
+    // Create a new portfolio list with the added item
+    final updatedPortfolio = List<PortfolioItem>.from(_currentUser!.portfolio);
+    
+    // Check if the stock is already in the portfolio
+    final existingItemIndex = updatedPortfolio.indexWhere(
+      (item) => item.symbol == stock.symbol
+    );
+    
+    if (existingItemIndex >= 0) {
+      // Update existing item
+      final existingItem = updatedPortfolio[existingItemIndex];
+      final updatedItem = PortfolioItem(
+        symbol: existingItem.symbol,
+        name: existingItem.name,
+        quantity: existingItem.quantity + quantity,
+        purchasePrice: (existingItem.purchasePrice * existingItem.quantity + price * quantity) / 
+                      (existingItem.quantity + quantity), // Weighted average price
+        purchaseDate: DateTime.now(),
+      );
+      updatedPortfolio[existingItemIndex] = updatedItem;
+    } else {
+      // Add new item
+      updatedPortfolio.add(portfolioItem);
+    }
+    
+    // Update user with new portfolio and reduced balance
+    final updatedUser = _currentUser!.copyWith(
+      portfolio: updatedPortfolio,
+      balance: _currentUser!.balance - totalCost,
+    );
+    
+    await saveUser(updatedUser);
+    return true;
+  }
+  
+  // Get the user's portfolio
+  List<PortfolioItem> getPortfolio() {
+    return _currentUser?.portfolio ?? [];
   }
 }
 

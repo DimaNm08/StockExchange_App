@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../services/user_service.dart';
 import '../services/finnhub_service.dart';
 import '../models/stock_quote.dart';
+import '../models/portfolio_item.dart';
 
 class PortfolioPage extends StatefulWidget {
   const PortfolioPage({Key? key}) : super(key: key);
@@ -13,8 +14,11 @@ class PortfolioPage extends StatefulWidget {
 
 class _PortfolioPageState extends State<PortfolioPage> {
   final FinnhubService _apiService = FinnhubService();
+  final UserService _userService = UserService();
   bool _isLoading = true;
-  List<StockQuote> _topStocks = [];
+  List<Map<String, dynamic>> _portfolioWithQuotes = [];
+  double _portfolioValue = 0.0;
+  double _portfolioGrowth = 0.0;
   
   @override
   void initState() {
@@ -28,12 +32,53 @@ class _PortfolioPageState extends State<PortfolioPage> {
     });
     
     try {
-      // Load top stocks as sample portfolio assets
-      List<String> topStockSymbols = ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'TSLA'];
-      List<StockQuote> stocks = await _apiService.getTopMovers(topStockSymbols);
+      // Get user's portfolio
+      final portfolio = _userService.getPortfolio();
+      
+      if (portfolio.isEmpty) {
+        setState(() {
+          _portfolioWithQuotes = [];
+          _portfolioValue = 0.0;
+          _portfolioGrowth = 0.0;
+          _isLoading = false;
+        });
+        return;
+      }
+      
+      // Get current quotes for all portfolio items
+      List<Map<String, dynamic>> portfolioWithQuotes = [];
+      double totalValue = 0.0;
+      double totalCost = 0.0;
+      
+      for (var item in portfolio) {
+        // Get current quote
+        final quote = await _apiService.getQuote(item.symbol);
+        
+        // Calculate current value and gain/loss
+        final currentValue = quote.price * item.quantity;
+        final purchaseCost = item.purchasePrice * item.quantity;
+        final gainLoss = currentValue - purchaseCost;
+        final gainLossPercent = purchaseCost > 0 ? (gainLoss / purchaseCost) : 0.0;
+        
+        totalValue += currentValue;
+        totalCost += purchaseCost;
+        
+        portfolioWithQuotes.add({
+          'item': item,
+          'quote': quote,
+          'currentValue': currentValue,
+          'gainLoss': gainLoss,
+          'gainLossPercent': gainLossPercent,
+        });
+      }
+      
+      // Calculate overall portfolio growth
+      final portfolioGrowth = totalCost > 0 ? ((totalValue - totalCost) / totalCost) : 0.0;
       
       setState(() {
-        _topStocks = stocks;
+        _portfolioWithQuotes = portfolioWithQuotes;
+        _portfolioValue = totalValue;
+        _portfolioGrowth = portfolioGrowth;
         _isLoading = false;
       });
     } catch (e) {
@@ -41,75 +86,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
       setState(() {
         _isLoading = false;
       });
-      
-      // Use fallback data if API fails
-      _loadFallbackData();
     }
-  }
-  
-  void _loadFallbackData() {
-    _topStocks = [
-      StockQuote(
-        symbol: 'AAPL',
-        open: 178.72,
-        high: 180.25,
-        low: 177.60,
-        price: 178.72,
-        volume: 65432100,
-        latestTradingDay: '2023-05-01',
-        previousClose: 177.00,
-        change: 1.72,
-        changePercent: 0.0063,
-      ),
-      StockQuote(
-        symbol: 'MSFT',
-        open: 417.88,
-        high: 420.00,
-        low: 415.50,
-        price: 417.88,
-        volume: 23456700,
-        latestTradingDay: '2023-05-01',
-        previousClose: 412.00,
-        change: 5.88,
-        changePercent: 0.0125,
-      ),
-      StockQuote(
-        symbol: 'AMZN',
-        open: 178.15,
-        high: 180.00,
-        low: 177.00,
-        price: 178.15,
-        volume: 12345678,
-        latestTradingDay: '2023-05-01',
-        previousClose: 179.50,
-        change: -1.35,
-        changePercent: -0.0085,
-      ),
-      StockQuote(
-        symbol: 'GOOGL',
-        open: 175.98,
-        high: 177.50,
-        low: 174.20,
-        price: 175.98,
-        volume: 34567800,
-        latestTradingDay: '2023-05-01',
-        previousClose: 174.30,
-        change: 1.68,
-        changePercent: 0.0089,
-      ),
-      StockQuote(
-        symbol: 'TSLA',
-        open: 177.67,
-        high: 180.00,
-        low: 175.00,
-        price: 177.67,
-        volume: 45678901,
-        latestTradingDay: '2023-05-01',
-        previousClose: 173.90,
-        change: 3.77,
-        changePercent: 0.0214,
-      ),
-    ];
   }
 
   @override
@@ -176,13 +153,10 @@ class _PortfolioPageState extends State<PortfolioPage> {
   }
 
   Widget _buildCurrentBalance() {
-    final user = UserService().currentUser;
-    final balance = user?.balance ?? 15750.23; // Default value if no user
+    final user = _userService.currentUser;
+    final balance = user?.balance ?? 0.0;
     final isDemo = user?.isDemo ?? false;
     
-    // Calculate portfolio growth (for demo purposes)
-    final portfolioGrowth = 5.23;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -227,27 +201,44 @@ class _PortfolioPageState extends State<PortfolioPage> {
                 color: Colors.blue,
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.green,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '+${portfolioGrowth.toStringAsFixed(2)}%',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+            if (_portfolioValue > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _portfolioGrowth >= 0 ? Colors.green : Colors.red,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${_portfolioGrowth >= 0 ? '+' : ''}${(_portfolioGrowth * 100).toStringAsFixed(2)}%',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
+        if (_portfolioValue > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              'Portfolio Value: \$${_portfolioValue.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[700],
+              ),
+            ),
+          ),
       ],
     );
   }
 
   Widget _buildPortfolioChart() {
+    // Only show chart if there are portfolio items
+    if (_portfolioWithQuotes.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -306,35 +297,123 @@ class _PortfolioPageState extends State<PortfolioPage> {
           ),
         ),
         const SizedBox(height: 16),
-        _topStocks.isEmpty
-            ? const Center(
-                child: Text('No assets found. Start investing to build your portfolio.'),
+        _portfolioWithQuotes.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 20),
+                    Icon(
+                      Icons.account_balance_wallet_outlined,
+                      size: 64,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'No assets found.',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Start investing to build your portfolio.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/buy_stocks');
+                      },
+                      child: const Text('Buy Stocks'),
+                    ),
+                  ],
+                ),
               )
             : ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: _topStocks.length,
+                itemCount: _portfolioWithQuotes.length,
                 itemBuilder: (context, index) {
-                  final stock = _topStocks[index];
+                  final item = _portfolioWithQuotes[index]['item'] as PortfolioItem;
+                  final quote = _portfolioWithQuotes[index]['quote'] as StockQuote;
+                  final currentValue = _portfolioWithQuotes[index]['currentValue'] as double;
+                  final gainLoss = _portfolioWithQuotes[index]['gainLoss'] as double;
+                  final gainLossPercent = _portfolioWithQuotes[index]['gainLossPercent'] as double;
+                  
                   return Card(
-                    child: ListTile(
-                      title: Text(_getCompanyName(stock.symbol)),
-                      subtitle: Text(stock.symbol),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            '\$${stock.price.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.symbol,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                  Text(
+                                    item.name,
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '\$${quote.price.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${quote.changePercent >= 0 ? '+' : ''}${(quote.changePercent * 100).toStringAsFixed(2)}%',
+                                    style: TextStyle(
+                                      color: quote.isPositive ? Colors.green : Colors.red,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          Text(
-                            stock.changePercentFormatted,
-                            style: TextStyle(
-                              color: stock.isPositive ? Colors.green : Colors.red,
-                            ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Quantity: ${item.quantity}'),
+                              Text('Avg. Price: \$${item.purchasePrice.toStringAsFixed(2)}'),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Current Value: \$${currentValue.toStringAsFixed(2)}'),
+                              Text(
+                                '${gainLoss >= 0 ? '+' : ''}\$${gainLoss.toStringAsFixed(2)} (${(gainLossPercent * 100).toStringAsFixed(2)}%)',
+                                style: TextStyle(
+                                  color: gainLoss >= 0 ? Colors.green : Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -344,28 +423,6 @@ class _PortfolioPageState extends State<PortfolioPage> {
               ),
       ],
     );
-  }
-  
-  String _getCompanyName(String symbol) {
-    // This is a simple mapping function. In a real app, you might want to store this data
-    // or fetch it from an API
-    Map<String, String> companyNames = {
-      'AAPL': 'Apple Inc.',
-      'MSFT': 'Microsoft Corporation',
-      'GOOGL': 'Alphabet Inc.',
-      'AMZN': 'Amazon.com Inc.',
-      'TSLA': 'Tesla, Inc.',
-      'META': 'Meta Platforms, Inc.',
-      'NFLX': 'Netflix, Inc.',
-      'ADBE': 'Adobe, Inc.',
-      'FB': 'Meta, Inc.',
-      'SPY': 'S&P 500 ETF',
-      'DIA': 'Dow Jones ETF',
-      'QQQ': 'Nasdaq 100 ETF',
-      'IWM': 'Russell 2000 ETF',
-    };
-    
-    return companyNames[symbol] ?? 'Unknown Company';
   }
 }
 
