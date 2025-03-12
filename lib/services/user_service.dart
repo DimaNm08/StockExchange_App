@@ -44,17 +44,20 @@ class UserService {
     await saveUser(User.guest());
   }
   
-  Future<void> createDemoUser({
-    required String loginName,
-    required String email,
-    required double balance,
-  }) async {
-    await saveUser(User.demo(
-      loginName: loginName,
-      email: email,
-      balance: balance,
-    ));
-  }
+  // Update createDemoUser method in UserService
+Future<void> createDemoUser({
+  required String loginName,
+  required String email,
+  required String password,  // Add this line
+  required double balance,
+}) async {
+  await saveUser(User.demo(
+    loginName: loginName,
+    email: email,
+    password: password,  // Add this line
+    balance: balance,
+  ));
+}
   
   // Add a stock to the user's portfolio
   Future<bool> addToPortfolio(StockSearchResult stock, int quantity, double price) async {

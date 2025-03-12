@@ -12,6 +12,8 @@ class _DemoSetupScreenState extends State<DemoSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _loginNameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();  // Add password controller
+  bool _obscurePassword = true;  // For toggle password visibility
   double _selectedBalance = 10000.0;
   
   final List<double> _balanceOptions = [1000.0, 5000.0, 10000.0, 50000.0, 100000.0];
@@ -20,6 +22,7 @@ class _DemoSetupScreenState extends State<DemoSetupScreen> {
   void dispose() {
     _loginNameController.dispose();
     _emailController.dispose();
+    _passwordController.dispose();  // Dispose password controller
     super.dispose();
   }
 
@@ -96,6 +99,40 @@ class _DemoSetupScreenState extends State<DemoSetupScreen> {
                     }
                     if (!value.contains('@') || !value.contains('.')) {
                       return 'Please enter a valid email';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                
+                // Password Field
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    hintText: 'Enter your password',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    prefixIcon: const Icon(Icons.lock),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a password';
+                    }
+                    if (value.length < 6) {
+                      return 'Password must be at least 6 characters';
                     }
                     return null;
                   },
@@ -212,6 +249,7 @@ class _DemoSetupScreenState extends State<DemoSetupScreen> {
       await UserService().createDemoUser(
         loginName: _loginNameController.text,
         email: _emailController.text,
+        password: _passwordController.text,  // Pass password to service
         balance: _selectedBalance,
       );
       
@@ -224,4 +262,3 @@ class _DemoSetupScreenState extends State<DemoSetupScreen> {
     }
   }
 }
-

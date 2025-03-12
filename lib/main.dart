@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'screens/onboarding.dart';
-import 'screens/signup.dart';
 import 'screens/homepage.dart';
 import 'screens/signin.dart';
 import 'screens/account.dart';
@@ -35,14 +34,13 @@ class MyApp extends StatelessWidget {
       initialRoute: _getInitialRoute(),
       routes: {
         '/': (context) => const OnboardingScreen(),
-        '/signup': (context) => SignupScreen(),
+        '/signup': (context) => AccountSelectionScreen(),
         '/signin': (context) => const SignInScreen(),
         '/homepage': (context) => const HomePage(),
         '/account': (context) => const AccountScreen(),
         '/search': (context) => const SearchPage(),
         '/portfolio': (context) => const PortfolioPage(),
         '/buy_stocks': (context) => const BuyStocksPage(),
-        '/account_selection': (context) => const AccountSelectionScreen(),
         '/demo_setup': (context) => const DemoSetupScreen(),
       },
     );
