@@ -18,6 +18,23 @@ class _HomePageState extends State<HomePage> {
   List<StockQuote> _popularStockQuotes = [];
   List<StockQuote> _marketIndices = [];
   
+  // Map to store stock symbols and their corresponding logo paths
+  final Map<String, String> _stockLogos = {
+    'AAPL': 'apple.png',
+    'MSFT': 'microsoft.png',
+    'GOOGL': 'google.png',
+    'AMZN': 'amazon.png',
+    'TSLA': 'tesla.png',
+    'META': 'meta.png',
+    'NFLX': 'netflix.png',
+    'ADBE': 'adobe.png',
+    'FB': 'facebook.png',
+    'SPY': 'spy.png',
+    'DIA': 'dia.png',
+    'QQQ': 'qqq.png',
+    'IWM': 'iwm.png',
+  };
+  
   @override
   void initState() {
     super.initState();
@@ -236,7 +253,6 @@ class _HomePageState extends State<HomePage> {
         children: [
           Row(
             children: [
-              Icon(Icons.show_chart, color: Colors.blue[700]),
               const SizedBox(width: 8),
               Text(
                 'StockXA',
@@ -259,115 +275,115 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildPortfolioValue() {
-  final user = UserService().currentUser;
-  final balance = user?.balance ?? 13240.11; // Default value if no user
-  final isDemo = user?.isDemo ?? false;
-  
-  // Calculate a random daily change for demo purposes
-  final changePercent = 0.012; // 1.2%
-  final change = balance * changePercent;
-  
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        children: [
-          const Text(
-            'Portfolio value',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
-          ),
-          if (isDemo)
-            Container(
-              margin: const EdgeInsets.only(left: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.blue[200]!),
-              ),
-              child: const Text(
-                'DEMO',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue,
-                ),
-              ),
-            ),
-        ],
-      ),
-      const SizedBox(height: 8),
-      Row(
-        children: [
-          Text(
-            '\$${balance.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.green[50],
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              '+${(changePercent * 100).toStringAsFixed(1)}% (\$${change.toStringAsFixed(2)})',
+    final user = UserService().currentUser;
+    final balance = user?.balance ?? 13240.11; // Default value if no user
+    final isDemo = user?.isDemo ?? false;
+    
+    // Calculate a random daily change for demo purposes
+    final changePercent = 0.012; // 1.2%
+    final change = balance * changePercent;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'Portfolio value',
               style: TextStyle(
-                color: Colors.green[700],
-                fontSize: 14,
+                fontSize: 16,
+                color: Colors.grey,
               ),
             ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 16),
-      SizedBox(
-        height: 100,
-        child: LineChart(
-          LineChartData(
-            gridData: FlGridData(show: false),
-            titlesData: FlTitlesData(show: false),
-            borderData: FlBorderData(show: false),
-            lineBarsData: [
-              LineChartBarData(
-                spots: [
-                  const FlSpot(0, 3),
-                  const FlSpot(2.6, 2),
-                  const FlSpot(4.9, 5),
-                  const FlSpot(6.8, 3.1),
-                  const FlSpot(8, 4),
-                  const FlSpot(9.5, 3),
-                  const FlSpot(11, 4),
-                ],
-                isCurved: true,
-                color: Colors.green,
-                barWidth: 2,
-                dotData: FlDotData(show: false),
-                belowBarData: BarAreaData(
-                  show: true,
-                  color: Colors.green.withOpacity(0.1),
+            if (isDemo)
+              Container(
+                margin: const EdgeInsets.only(left: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: const Text(
+                  'DEMO',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
                 ),
               ),
-            ],
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Text(
+              '\$${balance.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '+${(changePercent * 100).toStringAsFixed(1)}% (\$${change.toStringAsFixed(2)})',
+                style: TextStyle(
+                  color: Colors.green[700],
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 100,
+          child: LineChart(
+            LineChartData(
+              gridData: FlGridData(show: false),
+              titlesData: FlTitlesData(show: false),
+              borderData: FlBorderData(show: false),
+              lineBarsData: [
+                LineChartBarData(
+                  spots: [
+                    const FlSpot(0, 3),
+                    const FlSpot(2.6, 2),
+                    const FlSpot(4.9, 5),
+                    const FlSpot(6.8, 3.1),
+                    const FlSpot(8, 4),
+                    const FlSpot(9.5, 3),
+                    const FlSpot(11, 4),
+                  ],
+                  isCurved: true,
+                  color: Colors.green,
+                  barWidth: 2,
+                  dotData: FlDotData(show: false),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    color: Colors.green.withOpacity(0.1),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    ],
-  );
-}
+      ],
+    );
+  }
 
   Widget _buildMarketIndices() {
     return Row(
       children: [
         Expanded(
           child: _buildIndexCard(
-            _marketIndices.isNotEmpty ? _marketIndices[0].symbol : 'S&P 500',
+            _marketIndices.isNotEmpty ? _marketIndices[0].symbol : 'SPY',
             _marketIndices.isNotEmpty ? _marketIndices[0].changePercentFormatted : '+0.56%',
             _marketIndices.isNotEmpty && _marketIndices[0].isPositive ? Colors.green : Colors.red,
           ),
@@ -375,7 +391,7 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(width: 16),
         Expanded(
           child: _buildIndexCard(
-            _marketIndices.length > 1 ? _marketIndices[1].symbol : 'DOW',
+            _marketIndices.length > 1 ? _marketIndices[1].symbol : 'DIA',
             _marketIndices.length > 1 ? _marketIndices[1].changePercentFormatted : '+0.71%',
             _marketIndices.length > 1 && _marketIndices[1].isPositive ? Colors.green : Colors.red,
           ),
@@ -384,30 +400,39 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildIndexCard(String name, String change, Color color) {
+  Widget _buildIndexCard(String symbol, String change, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey[300]!),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            name,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            change,
-            style: TextStyle(
-              color: color,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+          // Add logo for market indices
+          _getStockLogo(symbol, size: 24),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  symbol,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  change,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -473,13 +498,8 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: Colors.grey[200],
-            child: Text(
-              symbol[0],
-              style: const TextStyle(color: Colors.black),
-            ),
-          ),
+          // Use the stock logo instead of CircleAvatar
+          _getStockLogo(symbol),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -540,6 +560,50 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Helper method to get stock logo
+  Widget _getStockLogo(String symbol, {double size = 40}) {
+  // Check if we have a logo for this symbol
+  if (_stockLogos.containsKey(symbol)) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(size / 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size / 2),
+        child: Image.asset(
+          'assets/${_stockLogos[symbol]!}',  // Add 'assets/' prefix here
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+        ),
+      ),
+    );
+  } else {
+    // Fallback to CircleAvatar with first letter if no logo is available
+    return CircleAvatar(
+      radius: size / 2,
+      backgroundColor: Colors.grey[200],
+      child: Text(
+        symbol[0],
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: size * 0.4,
+        ),
+      ),
+    );
+  }
+}
+
   String _getCompanyName(String symbol) {
     // This is a simple mapping function. In a real app, you might want to store this data
     // or fetch it from an API
@@ -562,4 +626,3 @@ class _HomePageState extends State<HomePage> {
     return companyNames[symbol] ?? 'Unknown Company';
   }
 }
-

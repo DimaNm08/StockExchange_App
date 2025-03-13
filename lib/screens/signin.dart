@@ -185,7 +185,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       child: Text(
                         'Or continue with',
                         style: TextStyle(
-                          color: Color(0xFF666D80),
+                          color: Color.fromARGB(255, 243, 243, 243),
                         ),
                       ),
                     ),
@@ -203,7 +203,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     const Text(
                       'Don\'t have an account? ',
                       style: TextStyle(
-                        color: Color(0xFF666D80),
+                        color: Color.fromARGB(255, 247, 247, 248),
                       ),
                     ),
                     TextButton(
@@ -214,7 +214,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       child: const Text(
                         'Sign up',
                         style: TextStyle(
-                          color: Color(0xFF3E52C1),
+                          color: Color.fromARGB(255, 241, 242, 243),
                           fontWeight: FontWeight.w500,
                         ),
                       ),

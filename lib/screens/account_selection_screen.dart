@@ -12,6 +12,7 @@ class AccountSelectionScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center, // This centers children vertically
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Logo
@@ -133,4 +134,3 @@ class AccountSelectionScreen extends StatelessWidget {
     );
   }
 }
-
