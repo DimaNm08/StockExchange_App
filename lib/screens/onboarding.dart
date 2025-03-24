@@ -33,7 +33,7 @@ class OnboardingScreen extends StatelessWidget {
                        Padding(
                           padding: const EdgeInsets.all(48.0),
                           child: Image.asset(
-                          'lib/assets/app_preview.png', // Path from the project root
+                          'assets/app_preview.png', // Path from the project root
                           fit: BoxFit.contain,
                          ),
                         ),
