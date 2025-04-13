@@ -95,6 +95,15 @@ class _PortfolioPageState extends State<PortfolioPage> {
       appBar: AppBar(
         title: const Text('My Portfolio'),
         backgroundColor: Colors.blue,
+        actions: [
+          // Only show the add money button for demo accounts
+          if (_userService.isDemo)
+            IconButton(
+              icon: const Icon(Icons.account_balance_wallet),
+              tooltip: 'Add Money',
+              onPressed: _showAddMoneyDialog,
+            ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -424,5 +433,70 @@ class _PortfolioPageState extends State<PortfolioPage> {
       ],
     );
   }
-}
 
+  void _showAddMoneyDialog() {
+    final TextEditingController amountController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Money to Demo Account'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter the amount you want to add to your demo account:'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: amountController,
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Amount',
+                prefixText: '\$',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              // Parse the amount
+              final amount = double.tryParse(amountController.text);
+              if (amount == null || amount <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please enter a valid amount'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              
+              // Add the money to the user's balance
+              await _userService.addMoneyToBalance(amount);
+              
+              // Close the dialog
+              Navigator.pop(context);
+              
+              // Show success message
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('\$${amount.toStringAsFixed(2)} added to your account'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              
+              // Refresh the data
+              _loadData();
+            },
+            child: const Text('Add Money'),
+          ),
+        ],
+      ),
+    );
+  }
+}

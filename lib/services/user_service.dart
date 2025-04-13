@@ -117,5 +117,17 @@ Future<void> createDemoUser({
   List<PortfolioItem> getPortfolio() {
     return _currentUser?.portfolio ?? [];
   }
-}
 
+  // Add money to the user's balance
+  Future<bool> addMoneyToBalance(double amount) async {
+    if (_currentUser == null) return false;
+    
+    // Update user with new balance
+    final updatedUser = _currentUser!.copyWith(
+      balance: _currentUser!.balance + amount,
+    );
+    
+    await saveUser(updatedUser);
+    return true;
+  }
+}

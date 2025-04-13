@@ -264,11 +264,6 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
-          ),
         ],
       ),
     );
@@ -452,11 +447,6 @@ class _HomePageState extends State<HomePage> {
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
-            ),
-            const Spacer(),
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              onPressed: () {},
             ),
           ],
         ),

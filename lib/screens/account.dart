@@ -20,30 +20,6 @@ class AccountScreen extends StatelessWidget {
             SingleChildScrollView(
               child: Column(
                 children: [
-                  // Status Bar Time (Fake)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          '9:41',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Row(
-                          children: const [
-                            Icon(Icons.signal_cellular_4_bar, size: 16),
-                            SizedBox(width: 4),
-                            Icon(Icons.battery_full, size: 16),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
                   // Header with back button
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -146,9 +122,6 @@ class AccountScreen extends StatelessWidget {
                           'Invite friends',
                           style: TextStyle(fontWeight: FontWeight.w600),
                         ),
-                        subtitle: const Text('Invite your friends and get \$15'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {},
                       ),
                     ),
                   ),
