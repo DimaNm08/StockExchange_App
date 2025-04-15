@@ -97,36 +97,6 @@ class AccountScreen extends StatelessWidget {
                     ),
                   const SizedBox(height: 24),
 
-                  // Invite Friends Card
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Card(
-                      color: const Color(0xFFF7FAFC),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: ListTile(
-                        leading: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.card_giftcard,
-                            color: Color(0xFF3E52C1),
-                          ),
-                        ),
-                        title: const Text(
-                          'Invite friends',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
                   // Settings Menu
                   _buildMenuItem(Icons.person_outline, 'Account'),
                   _buildMenuItem(Icons.fingerprint, 'Security'),

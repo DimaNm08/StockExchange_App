@@ -13,6 +13,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final FinnhubService _apiService = FinnhubService();
+  final UserService _userService = UserService();
   bool _isLoading = true;
   List<StockQuote> _watchlistQuotes = [];
   List<StockQuote> _popularStockQuotes = [];
@@ -270,13 +271,38 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildPortfolioValue() {
-    final user = UserService().currentUser;
+    final user = _userService.currentUser;
     final balance = user?.balance ?? 13240.11; // Default value if no user
     final isDemo = user?.isDemo ?? false;
     
-    // Calculate a random daily change for demo purposes
-    final changePercent = 0.012; // 1.2%
-    final change = balance * changePercent;
+    // Get portfolio data to calculate actual profit percentage
+    final portfolio = _userService.getPortfolio();
+    double totalValue = 0.0;
+    double totalCost = 0.0;
+    
+    // Calculate total value and cost from portfolio
+    for (var item in portfolio) {
+      // Try to find current price from our loaded quotes
+      double currentPrice = 0.0;
+      for (var quote in [..._watchlistQuotes, ..._popularStockQuotes]) {
+        if (quote.symbol == item.symbol) {
+          currentPrice = quote.price;
+          break;
+        }
+      }
+      
+      // If not found, use the purchase price (no change)
+      if (currentPrice == 0.0) {
+        currentPrice = item.purchasePrice;
+      }
+      
+      totalValue += currentPrice * item.quantity;
+      totalCost += item.purchasePrice * item.quantity;
+    }
+    
+    // Calculate actual profit percentage
+    final changePercent = totalCost > 0 ? (totalValue - totalCost) / totalCost : 0.0;
+    final change = totalValue - totalCost;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -324,13 +350,13 @@ class _HomePageState extends State<HomePage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.green[50],
+                color: changePercent >= 0 ? Colors.green[50] : Colors.red[50],
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                '+${(changePercent * 100).toStringAsFixed(1)}% (\$${change.toStringAsFixed(2)})',
+                '${changePercent >= 0 ? '+' : ''}${(changePercent * 100).toStringAsFixed(1)}% (\$${change.toStringAsFixed(2)})',
                 style: TextStyle(
-                  color: Colors.green[700],
+                  color: changePercent >= 0 ? Colors.green[700] : Colors.red[700],
                   fontSize: 14,
                 ),
               ),
@@ -340,36 +366,90 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(height: 16),
         SizedBox(
           height: 100,
-          child: LineChart(
-            LineChartData(
-              gridData: FlGridData(show: false),
-              titlesData: FlTitlesData(show: false),
-              borderData: FlBorderData(show: false),
-              lineBarsData: [
-                LineChartBarData(
-                  spots: [
-                    const FlSpot(0, 3),
-                    const FlSpot(2.6, 2),
-                    const FlSpot(4.9, 5),
-                    const FlSpot(6.8, 3.1),
-                    const FlSpot(8, 4),
-                    const FlSpot(9.5, 3),
-                    const FlSpot(11, 4),
-                  ],
-                  isCurved: true,
-                  color: Colors.green,
-                  barWidth: 2,
-                  dotData: FlDotData(show: false),
-                  belowBarData: BarAreaData(
-                    show: true,
-                    color: Colors.green.withOpacity(0.1),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          child: _buildProfitPercentageChart(changePercent),
         ),
       ],
+    );
+  }
+
+  // Updated method to build a chart based on profit percentage
+  Widget _buildProfitPercentageChart(double profitPercent) {
+    // If profit is 0 (just bought), show a straight line in the middle
+    if (profitPercent == 0) {
+      return LineChart(
+        LineChartData(
+          minY: 0,
+          maxY: 6,
+          gridData: FlGridData(show: false),
+          titlesData: FlTitlesData(show: false),
+          borderData: FlBorderData(show: false),
+          lineBarsData: [
+            LineChartBarData(
+              spots: List.generate(7, (index) => FlSpot(index.toDouble(), 3)),
+              isCurved: false,
+              color: Colors.blue, // Changed from grey to blue
+              barWidth: 2,
+              dotData: FlDotData(show: false),
+              belowBarData: BarAreaData(
+                show: true,
+                color: Colors.blue.withOpacity(0.1), // Changed from grey to blue
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    // For positive or negative profit, show appropriate chart
+    final color = profitPercent >= 0 ? Colors.green : Colors.red;
+    
+    // Create spots based on profit trend
+    List<FlSpot> spots = [];
+    if (profitPercent >= 0) {
+      // Positive trend - upward line
+      spots = [
+        const FlSpot(0, 2),
+        const FlSpot(2, 2.2),
+        const FlSpot(4, 2.8),
+        const FlSpot(6, 3.2),
+        const FlSpot(8, 3.8),
+        const FlSpot(10, 4.0),
+        const FlSpot(12, 4.2),
+      ];
+    } else {
+      // Negative trend - downward line
+      spots = [
+        const FlSpot(0, 4),
+        const FlSpot(2, 3.8),
+        const FlSpot(4, 3.2),
+        const FlSpot(6, 2.8),
+        const FlSpot(8, 2.2),
+        const FlSpot(10, 2.0),
+        const FlSpot(12, 1.8),
+      ];
+    }
+    
+    return LineChart(
+      LineChartData(
+        minY: 0,
+        maxY: 6,
+        gridData: FlGridData(show: false),
+        titlesData: FlTitlesData(show: false),
+        borderData: FlBorderData(show: false),
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            color: color,
+            barWidth: 2,
+            dotData: FlDotData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              color: color.withOpacity(0.1),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -451,12 +531,7 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         for (var quote in _watchlistQuotes)
-          _buildStockItem(
-            quote.symbol,
-            _getCompanyName(quote.symbol),
-            quote.changePercentFormatted,
-            quote.isPositive ? Colors.green : Colors.red,
-          ),
+          _buildStockItem(quote),
       ],
     );
   }
@@ -473,36 +548,37 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         for (var quote in _popularStockQuotes)
-          _buildStockItem(
-            quote.symbol,
-            _getCompanyName(quote.symbol),
-            quote.changePercentFormatted,
-            quote.isPositive ? Colors.green : Colors.red,
-          ),
+          _buildStockItem(quote),
       ],
     );
   }
 
-  Widget _buildStockItem(String symbol, String name, String change, Color color) {
+  // Updated method to build stock item - now takes a StockQuote directly
+  Widget _buildStockItem(StockQuote quote) {
+    // Always use the API percentage for display on the home page
+    final String change = quote.changePercentFormatted;
+    final Color color = quote.isPositive ? Colors.green : Colors.red;
+    final double changePercent = quote.changePercent;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
           // Use the stock logo instead of CircleAvatar
-          _getStockLogo(symbol),
+          _getStockLogo(quote.symbol),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  symbol,
+                  quote.symbol,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  name,
+                  _getCompanyName(quote.symbol),
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 12,
@@ -514,28 +590,7 @@ class _HomePageState extends State<HomePage> {
           SizedBox(
             width: 80,
             height: 30,
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(show: false),
-                titlesData: FlTitlesData(show: false),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: [
-                      const FlSpot(0, 3),
-                      const FlSpot(2.6, 2),
-                      const FlSpot(4.9, 5),
-                      const FlSpot(6.8, 3.1),
-                      const FlSpot(8, 4),
-                    ],
-                    isCurved: true,
-                    color: color,
-                    barWidth: 1,
-                    dotData: FlDotData(show: false),
-                  ),
-                ],
-              ),
-            ),
+            child: _buildStockMiniChart(changePercent, color),
           ),
           const SizedBox(width: 12),
           Text(
@@ -549,50 +604,122 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
-  // Helper method to get stock logo
-  Widget _getStockLogo(String symbol, {double size = 40}) {
-  // Check if we have a logo for this symbol
-  if (_stockLogos.containsKey(symbol)) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(size / 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 2,
-            offset: const Offset(0, 1),
+  
+  // Updated method to build stock mini chart
+  Widget _buildStockMiniChart(double changePercent, Color color) {
+    // Create spots based on change trend - restored to original style but with better positioning
+    List<FlSpot> spots = [];
+    
+    if (changePercent == 0) {
+      // Flat line in the middle for 0% change
+      spots = [
+        const FlSpot(0, 3),
+        const FlSpot(1, 3),
+        const FlSpot(2, 3),
+        const FlSpot(3, 3),
+        const FlSpot(4, 3),
+      ];
+      return LineChart(
+        LineChartData(
+          minY: 0,
+          maxY: 6,
+          gridData: FlGridData(show: false),
+          titlesData: FlTitlesData(show: false),
+          borderData: FlBorderData(show: false),
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              color: Colors.blue, // Changed from grey to blue
+              barWidth: 1,
+              dotData: FlDotData(show: false),
+            ),
+          ],
+        ),
+      );
+    } else if (changePercent > 0) {
+      // Positive trend - upward line
+      spots = [
+        const FlSpot(0, 3),
+        const FlSpot(2.6, 2),
+        const FlSpot(4.9, 5),
+        const FlSpot(6.8, 3.1),
+        const FlSpot(8, 4),
+      ];
+    } else {
+      // Negative trend - downward line
+      spots = [
+        const FlSpot(0, 3),
+        const FlSpot(2.6, 4),
+        const FlSpot(4.9, 1),
+        const FlSpot(6.8, 2.9),
+        const FlSpot(8, 2),
+      ];
+    }
+    
+    return LineChart(
+      LineChartData(
+        minY: 0,
+        maxY: 6,
+        gridData: FlGridData(show: false),
+        titlesData: FlTitlesData(show: false),
+        borderData: FlBorderData(show: false),
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            color: color,
+            barWidth: 1,
+            dotData: FlDotData(show: false),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(size / 2),
-        child: Image.asset(
-          'assets/${_stockLogos[symbol]!}',  // Add 'assets/' prefix here
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-        ),
-      ),
-    );
-  } else {
-    // Fallback to CircleAvatar with first letter if no logo is available
-    return CircleAvatar(
-      radius: size / 2,
-      backgroundColor: Colors.grey[200],
-      child: Text(
-        symbol[0],
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: size * 0.4,
-        ),
-      ),
     );
   }
-}
+
+  // Helper method to get stock logo
+  Widget _getStockLogo(String symbol, {double size = 40}) {
+    // Check if we have a logo for this symbol
+    if (_stockLogos.containsKey(symbol)) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(size / 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(size / 2),
+          child: Image.asset(
+            'assets/${_stockLogos[symbol]!}',  // Add 'assets/' prefix here
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    } else {
+      // Fallback to CircleAvatar with first letter if no logo is available
+      return CircleAvatar(
+        radius: size / 2,
+        backgroundColor: Colors.grey[200],
+        child: Text(
+          symbol[0],
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: size * 0.4,
+          ),
+        ),
+      );
+    }
+  }
 
   String _getCompanyName(String symbol) {
     // This is a simple mapping function. In a real app, you might want to store this data

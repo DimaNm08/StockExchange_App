@@ -9,7 +9,7 @@ class PortfolioPage extends StatefulWidget {
   const PortfolioPage({Key? key}) : super(key: key);
 
   @override
-  _PortfolioPageState createState() => _PortfolioPageState();
+  State<PortfolioPage> createState() => _PortfolioPageState();
 }
 
 class _PortfolioPageState extends State<PortfolioPage> {
@@ -69,6 +69,8 @@ class _PortfolioPageState extends State<PortfolioPage> {
           'currentValue': currentValue,
           'gainLoss': gainLoss,
           'gainLossPercent': gainLossPercent,
+          'apiChangePercent': quote.changePercent, // Store the API change percentage
+          'apiChangePercentFormatted': quote.changePercentFormatted, // Store the formatted API change
         });
       }
       
@@ -101,7 +103,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
             IconButton(
               icon: const Icon(Icons.account_balance_wallet),
               tooltip: 'Add Money',
-              onPressed: _showAddMoneyDialog,
+              onPressed: () => _showAddMoneyDialog(),
             ),
         ],
       ),
@@ -261,36 +263,90 @@ class _PortfolioPageState extends State<PortfolioPage> {
         const SizedBox(height: 16),
         SizedBox(
           height: 200,
-          child: LineChart(
-            LineChartData(
-              gridData: FlGridData(show: false),
-              titlesData: FlTitlesData(show: false),
-              borderData: FlBorderData(show: false),
-              lineBarsData: [
-                LineChartBarData(
-                  spots: [
-                    const FlSpot(0, 3),
-                    const FlSpot(2.6, 2),
-                    const FlSpot(4.9, 5),
-                    const FlSpot(6.8, 3.1),
-                    const FlSpot(8, 4),
-                    const FlSpot(9.5, 3),
-                    const FlSpot(11, 4),
-                  ],
-                  isCurved: true,
-                  color: Colors.blue,
-                  barWidth: 3,
-                  dotData: FlDotData(show: false),
-                  belowBarData: BarAreaData(
-                    show: true,
-                    color: Colors.blue.withOpacity(0.1),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          child: _buildProfitPercentageChart(_portfolioGrowth),
         ),
       ],
+    );
+  }
+  
+  // Method to build a chart based on profit percentage
+  Widget _buildProfitPercentageChart(double profitPercent) {
+    // If profit is 0 (just bought), show a straight line in the middle
+    if (profitPercent == 0) {
+      return LineChart(
+        LineChartData(
+          minY: 0,
+          maxY: 6,
+          gridData: FlGridData(show: false),
+          titlesData: FlTitlesData(show: false),
+          borderData: FlBorderData(show: false),
+          lineBarsData: [
+            LineChartBarData(
+              spots: List.generate(7, (index) => FlSpot(index.toDouble(), 3)),
+              isCurved: false,
+              color: Colors.blue, // Changed from grey to blue
+              barWidth: 3,
+              dotData: FlDotData(show: false),
+              belowBarData: BarAreaData(
+                show: true,
+                color: Colors.blue.withOpacity(0.1), // Changed from grey to blue
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    // For positive or negative profit, show appropriate chart
+    final color = profitPercent >= 0 ? Colors.blue : Colors.red;
+    
+    // Create spots based on profit trend
+    List<FlSpot> spots = [];
+    if (profitPercent >= 0) {
+      // Positive trend - upward line
+      spots = [
+        const FlSpot(0, 2),
+        const FlSpot(2, 2.2),
+        const FlSpot(4, 2.8),
+        const FlSpot(6, 3.2),
+        const FlSpot(8, 3.8),
+        const FlSpot(10, 4.0),
+        const FlSpot(11, 4.2),
+      ];
+    } else {
+      // Negative trend - downward line
+      spots = [
+        const FlSpot(0, 4),
+        const FlSpot(2, 3.8),
+        const FlSpot(4, 3.2),
+        const FlSpot(6, 2.8),
+        const FlSpot(8, 2.2),
+        const FlSpot(10, 2.0),
+        const FlSpot(11, 1.8),
+      ];
+    }
+    
+    return LineChart(
+      LineChartData(
+        minY: 0,
+        maxY: 6,
+        gridData: FlGridData(show: false),
+        titlesData: FlTitlesData(show: false),
+        borderData: FlBorderData(show: false),
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            color: color,
+            barWidth: 3,
+            dotData: FlDotData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              color: color.withOpacity(0.1),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -391,12 +447,17 @@ class _PortfolioPageState extends State<PortfolioPage> {
                                       fontSize: 16,
                                     ),
                                   ),
-                                  Text(
-                                    '${quote.changePercent >= 0 ? '+' : ''}${(quote.changePercent * 100).toStringAsFixed(2)}%',
-                                    style: TextStyle(
-                                      color: quote.isPositive ? Colors.green : Colors.red,
-                                      fontSize: 14,
-                                    ),
+                                  Row(
+                                    children: [
+                                      // Show API percentage in smaller text
+                                      Text(
+                                        ' ${quote.changePercentFormatted}',
+                                        style: TextStyle(
+                                          color: quote.isPositive ? Colors.green : Colors.red,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -448,7 +509,7 @@ class _PortfolioPageState extends State<PortfolioPage> {
             const SizedBox(height: 16),
             TextField(
               controller: amountController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
                 labelText: 'Amount',
                 prefixText: '\$',
@@ -480,15 +541,17 @@ class _PortfolioPageState extends State<PortfolioPage> {
               await _userService.addMoneyToBalance(amount);
               
               // Close the dialog
-              Navigator.pop(context);
-              
-              // Show success message
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('\$${amount.toStringAsFixed(2)} added to your account'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+              if (mounted) {
+                Navigator.pop(context);
+                
+                // Show success message
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('\$${amount.toStringAsFixed(2)} added to your account'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
               
               // Refresh the data
               _loadData();
